@@ -386,7 +386,7 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
       <button type="button" id="i18n-en-btn" onclick="setAppLang('en')" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#fff;cursor:pointer;font-size:0.82rem">🇬🇧 English</button>
     </div>
     <div class="nav-item logout" onclick="signOutUser()"><span class="icon">🚪</span> <span data-i18n="nav.logout">התנתק</span></div>
-    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.05-r30</div>
+    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.05-r31-DEBUG</div>
   </aside>
 
   <!-- Main Content -->
@@ -1559,7 +1559,7 @@ try {
 const storage = firebase.storage();
 let currentUser = null;
 let userRole = null;
-console.log('%c[ruach-manage] v2026.05.05-r30 loaded', 'color:#1a8a9a;font-weight:bold');
+console.log('%c[ruach-manage] v2026.05.05-r31-DEBUG loaded', 'color:#1a8a9a;font-weight:bold');
 
 // ===== PURPOSE / AREA DICTIONARIES =====
 // The 6 canonical "areas" = the operational programs of the association.
@@ -1912,6 +1912,21 @@ function showLoginError(text, hint) {
   el.innerHTML = `<strong>${text}</strong>${hint ? `<br><small style="opacity:0.85">${hint}</small>` : ''}`;
 }
 
+function _dbg(msg, color) {
+  console.log('[DBG]', msg);
+  let el = document.getElementById('loginDebug');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'loginDebug';
+    el.style.cssText = 'margin-top:12px;padding:8px;background:#f8fafc;border-radius:6px;font-size:0.78rem;text-align:right;direction:rtl;color:#374151;font-family:monospace;max-height:200px;overflow-y:auto;border:1px solid #e5e7eb';
+    const box = document.querySelector('.login-box');
+    if (box) box.appendChild(el);
+  }
+  const ts = new Date().toLocaleTimeString('he-IL');
+  el.innerHTML += `<div style="color:${color||'#374151'};margin-bottom:4px">[${ts}] ${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
 function signIn() {
   if (_signInInFlight) return;
   _signInInFlight = true;
@@ -1920,22 +1935,28 @@ function signIn() {
   const errEl = document.getElementById('loginError');
   if (errEl) errEl.style.display = 'none';
 
+  _dbg('1️⃣ פותחת popup...', '#0891b2');
+
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
 
-  // Try popup first — gives clearer error feedback and avoids redirect loops.
   auth.signInWithPopup(provider)
-    .then(() => { _signInInFlight = false; if (btn) { btn.disabled = false; btn.style.opacity = ''; } })
+    .then((result) => {
+      _signInInFlight = false;
+      if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+      _dbg('✅ Popup הצליח! משתמש: ' + (result?.user?.email || '?'), '#16a34a');
+      _dbg('⏳ ממתין ל-onAuthStateChanged...', '#d97706');
+    })
     .catch(e => {
       console.error('[signIn]', e);
       _signInInFlight = false;
       if (btn) { btn.disabled = false; btn.style.opacity = ''; }
       const code = e?.code || '';
+      _dbg('❌ Popup נכשל: ' + code + ' — ' + (e.message||'').slice(0,80), '#dc2626');
       if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
         showLoginError('הכניסה בוטלה', 'לחצי שוב כדי להתחבר.');
       } else if (code === 'auth/popup-blocked') {
-        // Only as last resort: try redirect
-        showLoginError('הדפדפן חוסם חלון קופץ', 'מנסה דרך אחרת...');
+        showLoginError('הדפדפן חוסם חלון קופץ', 'מנסה redirect...');
         auth.signInWithRedirect(provider).catch(e2 => showLoginError('שגיאה', e2.message||e2.code));
       } else if (code === 'auth/unauthorized-domain' || /requested action is invalid/i.test(e?.message||'')) {
         showLoginError('הדומיין לא מאושר ב-Firebase', 'הוסיפי את הדומיין ל-Authorized domains ב-Firebase Console.');
@@ -1957,6 +1978,7 @@ function signOutUser() {
 }
 
 auth.onAuthStateChanged(async user => {
+  if (typeof _dbg === 'function') _dbg('2️⃣ onAuthStateChanged: user=' + (user?.email || 'NULL'), user ? '#16a34a' : '#dc2626');
   // Public routes (transparency / presentation) — render without login
   try {
     if (typeof checkPublicRoute === 'function' && checkPublicRoute()) return;
@@ -1968,14 +1990,17 @@ auth.onAuthStateChanged(async user => {
   }
   currentUser = user;
   console.log('Auth: user=', user.email);
+  if (typeof _dbg === 'function') _dbg('3️⃣ קורא team doc עבור: ' + user.email, '#0891b2');
 
   try {
     // Check if user has access
     let teamDoc;
     try {
       teamDoc = await db.collection('team').doc(user.email).get();
+      if (typeof _dbg === 'function') _dbg('4️⃣ team doc exists=' + teamDoc.exists, teamDoc.exists ? '#16a34a' : '#d97706');
     } catch(e) {
       console.error('Firestore team read error:', e);
+      if (typeof _dbg === 'function') _dbg('❌ team read error: ' + e.message, '#dc2626');
       // If Firestore rules block, auto-grant admin to this email
       userRole = 'admin';
       showApp(user);
@@ -1983,9 +2008,11 @@ auth.onAuthStateChanged(async user => {
     }
 
     if (!teamDoc.exists) {
+      if (typeof _dbg === 'function') _dbg('⚠️ אין team doc — בודק אם זה משתמש ראשון', '#d97706');
       // First user becomes admin automatically
       let teamSnap;
       try { teamSnap = await db.collection('team').get(); } catch(e) { teamSnap = { empty: true }; }
+      if (typeof _dbg === 'function') _dbg('team size: ' + (teamSnap.size||0), '#0891b2');
       if (teamSnap.empty || teamSnap.size === 0) {
         try {
           await db.collection('team').doc(user.email).set({
@@ -2016,14 +2043,18 @@ auth.onAuthStateChanged(async user => {
     }
 
     // Load the org info doc (name, registration, custom areas, branding...)
+    if (typeof _dbg === 'function') _dbg('5️⃣ טוען org info...', '#0891b2');
     await loadOrgInfo();
+    if (typeof _dbg === 'function') _dbg('6️⃣ מעלה את האפליקציה...', '#16a34a');
 
     showApp(user);
   } catch(e) {
     console.error('Auth flow error:', e);
+    if (typeof _dbg === 'function') _dbg('❌ Auth flow error: ' + e.message, '#dc2626');
     // Fallback: show app anyway for the known admin email
     if (user.email === 'i.barkai7@gmail.com') {
       userRole = 'admin';
+      if (typeof _dbg === 'function') _dbg('🛟 Fallback: super-admin override', '#d97706');
       showApp(user);
     }
   }
