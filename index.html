@@ -379,7 +379,7 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
       <button type="button" id="i18n-en-btn" onclick="setAppLang('en')" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#fff;cursor:pointer;font-size:0.82rem">🇬🇧 English</button>
     </div>
     <div class="nav-item logout" onclick="signOutUser()"><span class="icon">🚪</span> <span data-i18n="nav.logout">התנתק</span></div>
-    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.05-r23</div>
+    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.05-r24</div>
   </aside>
 
   <!-- Main Content -->
@@ -388,25 +388,17 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
     <!-- DASHBOARD -->
     <div class="section active" id="sec-dashboard">
       <div class="page-header">
-        <h1 data-i18n="page.dashboard.title">דשבורד</h1>
-        <p data-i18n="page.dashboard.sub">סקירה כללית של פעילות העמותה</p>
+        <h1 data-i18n="page.dashboard.title">דשבורד מנהלים</h1>
+        <p data-i18n="page.dashboard.sub">תוכניות העמותה — תמונת מצב, ביצוע ומדדים</p>
       </div>
-      <div class="kpi-grid">
-        <div class="kpi clickable" onclick="drillDown('finance','income')" title="לחצי לפירוט הכנסות"><div class="icon">💰</div><div class="label" data-i18n="kpi.income">סך הכנסות</div><div class="value" id="dash-income">₪0</div></div>
-        <div class="kpi clickable" onclick="drillDown('finance','expense')" title="לחצי לפירוט הוצאות"><div class="icon">📤</div><div class="label" data-i18n="kpi.expense">סך הוצאות</div><div class="value" id="dash-expense">₪0</div></div>
-        <div class="kpi clickable" onclick="drillDown('finance')" title="לחצי לפירוט פיננסי"><div class="icon">📊</div><div class="label" data-i18n="kpi.balance">יתרה</div><div class="value" id="dash-balance">₪0</div></div>
-        <div class="kpi clickable" onclick="drillDown('donors')" title="לחצי לרשימת תורמים"><div class="icon">❤️</div><div class="label" data-i18n="kpi.donors">תורמים</div><div class="value" id="dash-donors">0</div></div>
-        <div class="kpi clickable" onclick="drillDown('projects','active')" title="לחצי לפרויקטים פעילים"><div class="icon">🎯</div><div class="label" data-i18n="kpi.projects_active">פרויקטים פעילים</div><div class="value" id="dash-projects">0</div></div>
-        <div class="kpi clickable" onclick="drillDown('reports','this-month')" title="לחצי לדיווחי החודש"><div class="icon">📋</div><div class="label" data-i18n="kpi.reports_month">דיווחים החודש</div><div class="value" id="dash-reports">0</div></div>
-        <div class="kpi clickable" onclick="drillDown('tasks','overdue')" title="לחצי למשימות באיחור"><div class="icon">⚠️</div><div class="label">משימות באיחור</div><div class="value" id="dash-tasks-overdue" style="color:var(--danger)">0</div></div>
-      </div>
-      <!-- PROGRAMS GRID — main feature of the dashboard: cards for each of the 7 programs -->
+
+      <!-- PROGRAMS GRID — first thing on the page -->
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:16px">
           <h3 style="margin:0">🏛️ תוכניות העמותה</h3>
           <small style="color:var(--muted)">לחצו על כרטיס לצלילה לתוכנית</small>
         </div>
-        <div id="programsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px"></div>
+        <div id="programsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px">
       </div>
 
       <!-- ATTENTION REQUIRED WIDGET — for CEO / board: pulls from open approvals, overdue tasks, vehicle faults -->
@@ -418,7 +410,22 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
         <div id="attentionWidgetBody"><div class="empty-state" style="padding:20px">טוען...</div></div>
       </div>
 
-      <div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;background:linear-gradient(135deg,#fff1e6 0%,#ccfbf1 100%);border-right:4px solid var(--primary)">
+      <!-- AGGREGATE KPIs — moved to bottom; drill-down to filtered views -->
+      <div class="card" style="background:var(--primary-soft);border-right:4px solid var(--primary)">
+        <h3 style="margin:0 0 12px">📊 סקירה כללית של העמותה</h3>
+        <p style="margin:0 0 14px;color:var(--muted);font-size:0.88rem">סיכום מצרפי על כלל התוכניות. לחצו על כל אריח לצלילה.</p>
+        <div class="kpi-grid" style="margin-bottom:0">
+          <div class="kpi clickable" onclick="drillDown('finance','income')" title="לחצי לפירוט הכנסות"><div class="icon">💰</div><div class="label">סך הכנסות</div><div class="value" id="dash-income">₪0</div></div>
+          <div class="kpi clickable" onclick="drillDown('finance','expense')" title="לחצי לפירוט הוצאות"><div class="icon">📤</div><div class="label">סך הוצאות</div><div class="value" id="dash-expense">₪0</div></div>
+          <div class="kpi clickable" onclick="drillDown('finance')" title="לחצי לפירוט פיננסי"><div class="icon">📊</div><div class="label">יתרה</div><div class="value" id="dash-balance">₪0</div></div>
+          <div class="kpi clickable" onclick="drillDown('donors')" title="לחצי לרשימת תורמים"><div class="icon">❤️</div><div class="label">תורמים</div><div class="value" id="dash-donors">0</div></div>
+          <div class="kpi clickable" onclick="drillDown('reports','this-month')" title="לחצי לדיווחי החודש"><div class="icon">📋</div><div class="label">דיווחים החודש</div><div class="value" id="dash-reports">0</div></div>
+          <div class="kpi clickable" onclick="drillDown('tasks','overdue')" title="לחצי למשימות באיחור"><div class="icon">⚠️</div><div class="label">משימות באיחור</div><div class="value" id="dash-tasks-overdue" style="color:var(--danger)">0</div></div>
+          <div class="kpi" id="dash-projects" style="display:none">0</div>
+        </div>
+      </div>
+
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;background:linear-gradient(135deg,#e6f3f5 0%,#f7f0d9 100%);border-right:4px solid var(--gold)">
         <div>
           <h3 style="margin:0 0 4px">📊 דוח פעילות מסכם</h3>
           <p style="margin:0;color:#475569;font-size:0.9rem">הפק דוח חודשי או שנתי המאחד הכנסות, הוצאות ודיווחי עובדים</p>
@@ -684,6 +691,15 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
 
       <!-- Top KPIs -->
       <div class="kpi-grid" id="progDetailKpis"></div>
+
+      <!-- Logic Model — inputs / activities / outputs / outcomes / impact -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+          <h3 style="margin:0">📐 מודל הלוגיקה של התוכנית</h3>
+          <span id="progDetailLogicEdit"></span>
+        </div>
+        <div id="progDetailLogic"></div>
+      </div>
 
       <!-- Goals + KPIs (read from workplan) -->
       <div class="card">
@@ -1591,8 +1607,8 @@ const PURPOSES = {
   // === Canonical 7 programs (matches official 2026 budget) ===
   'ruach-hashmonait':  'רוח חשמונאית',
   'lev-david':         'לב דוד',
-  'torah-empowerment': 'והגית בו',
-  'beit-neeman':       'בית בישראל',
+  'torah-empowerment': 'מפעל התורה דחשמונאים',
+  'beit-neeman':       'בית נאמן',
   'shaar-yetzia':      'חשמונאים לעתיד ישראל',
   'welfare-fund':      'קרן הרווחה והסיוע',
   'admin-general':     'מנהלה וכלליות',
@@ -1600,7 +1616,7 @@ const PURPOSES = {
   torah:   'רוח חשמונאית',
   prep:    'לב דוד',
   welfare: 'קרן הרווחה והסיוע',
-  study:   'והגית בו',
+  study:   'מפעל התורה דחשמונאים',
   alumni:  'חשמונאים לעתיד ישראל',
   general: 'כללי',
   admin:   'מנהלה',
@@ -1608,57 +1624,92 @@ const PURPOSES = {
   office:  'משרד וציוד'
 };
 
-// Program metadata — leader, budget, status. Mirrors the official 2026 budget plan.
-// Used by the Program Cards on the dashboard and the drill-down view.
+// Program metadata — leader, budget, status, logic model.
+// Mirrors the official 2026 work plan + budget. ALL fields editable from program detail.
 const DEFAULT_PROGRAM_INFO = {
   'ruach-hashmonait': {
     leader: 'הרב רוטמן',
     description: 'הליווי הרוחני-חינוכי ללוחם והמפקד החרדי',
     annualBudget: 2316000,
     status: 'active',
-    statusLabel: 'פעיל · מסתמן מימון ייעודי'
+    statusLabel: 'פעיל · מסתמן מימון ייעודי',
+    inputs: 'מוביל תוכנית, 8 ר"מים פלוגתיים, 2 מוסרי שיעורים (150 שיעורים), מרצים ע"פ דרישה (עד 20 שעות בחודש), ליווי נפשי, 3 רכבים לניידות',
+    activities: 'ליווי רוחני-חינוכי אישי בבא"ח, גדוד וסיירת. נוכחות בשעות הלימוד, בשטח, בשעות ת"ש; שיעורים באמונה ובעבודת השם; ליווי חינוכי מסגרתי ושיקוף תמונת מצב למערכת',
+    outputs: '~1,400 שעות ליווי חינוכי רוחני בחודש; ~150 שיעורים בחודש; 80 שעות בחודש לכתיבה ובניית תכנים; 20 שעות מרצה חיצוני בחודש',
+    outcomes: 'עמידה ב-90% שביעות רצון מהליווי הרוחני; צמצום נשירה על רקע דתי לפחות מ-5%; 15%+ מהלוחמים המשתלבים במסלולי פיקוד וקצונה תוך שמירה על זהותם התורנית',
+    impact: 'יצירת מוטיבציה וחיזוק הזהות החרדית תורנית של הלוחם החשמונאי, העמדת אנשי תורה בעולם העשייה הצבאי'
   },
   'lev-david': {
     leader: 'הרב רוטמן',
     description: 'מסלולי הכנה קדם-צבאיים (בשיתוף עמותת שחר)',
     annualBudget: 864000,
     status: 'active',
-    statusLabel: 'מסלול ראשון פעיל'
+    statusLabel: 'מסלול ראשון פעיל',
+    inputs: 'צוות הוראה; תקציב שיווק; שיתוף פעולה עם עמותת "שחר"',
+    activities: 'רישום מועמדים; סדנאות הכנה מנטלית ופיזית; שיעורי מורשת',
+    outputs: 'מכינה מרוכזת — 3 מחזורי הכנה בשנה, 100 בוגרים המסיימים ומתגייסים. מכינה חצי-שנתית — 2 מחזורים, 60 בוגרים המסיימים ומתגייסים',
+    outcomes: 'גיוס של 90% מבוגרי המכינה לשירות קרבי; מעל 25% יציאה לפיקוד וקצונה; 90% שביעות רצון מההכנה; צמצום של 20% בנשירה מהשירות',
+    impact: 'בניית עתודת לוחמים ומנהיגות חרדית איכותית בצה"ל'
   },
   'torah-empowerment': {
     leader: 'יעקב קנירש ואהרון פרובר',
-    description: 'חיזוק והעצמת לימוד התורה בקרב חיילי ובוגרי החטיבה',
+    description: 'חיזוק והעצמת לימוד התורה בקרב חיילי, מפקדי ובוגרי החטיבה',
     annualBudget: 624000,
     status: 'planning',
-    statusLabel: 'בהתהוות'
+    statusLabel: 'בהתהוות',
+    inputs: 'רכז מדיה והנגשת תוכן, מענקים ותמריצים, אירועי שיא, דפוס ע"פ צורך, מימון כולל סופ"ש; מנוי ל-60 עותקי דבר מלכות',
+    activities: 'מבצעי לימוד חטיבתיים; ערבי "סיום מסכת"; הפעלת כולל יום שישי ומוצאי שבת; הפצת דבר מלכות; כתיבת תכני "רוח חשמונאית"',
+    outputs: 'קיום שיטתי של מבצעי לימוד והנגשת חומרי לימוד; יעד 1,000 משתתפים פעילים בתוכניות הלימוד; כולל ללוחמים בסופי שבוע',
+    outcomes: 'כתיבה והפקה של 90% ממערכי השיעור והתכנים התורניים; הגעה ל-70% מהלוחמים המדווחים על קביעת עתים לתורה; 50% מהלוחמים בכולל סופ"ש; רישום 1,500 משתתפים פעילים',
+    impact: 'לימוד התורה כאבן היסוד בעשיית החטיבה ובחיים הפרטיים או הציבוריים של בוגרי החטיבה — "למען שמו באהבה"'
   },
   'beit-neeman': {
     leader: 'מלכה אייזנמן',
-    description: 'שידוכים, ליווי חתנים, מעטפת למשפחות, קהילת נשות החטיבה',
+    description: 'שידוכים, ליווי חתנים וזוגות, מעטפת למשפחות, קהילת נשות החטיבה',
     annualBudget: 504000,
     status: 'active',
-    statusLabel: 'פעיל / בהתהוות'
+    statusLabel: 'פעיל / בהתהוות',
+    inputs: 'יועצי זוגיות, מדריכי חתנים, מדריכות כלות, רכזת קהילת נשים; תקציב לאירועי הורים ולאירועים ייעודיים לנשות החטיבה',
+    activities: 'ליווי חתנים וכלות (למציאות של נישואין בשירות אינטנסיבי); מפגשי קהילת נשות החטיבה; מערך תמיכה ליולדות',
+    outputs: 'סדנאות זוגיות; קהילת נשים פעילה ותומכת; זוגות מלווים',
+    outcomes: 'ליווי והדרכה ל-100% מהחתנים והכלות בחטיבה; צמצום של 15% בפניות למערך הת"ש על רקע מצוקה זוגית; דיווח חיובי מ-80% מנשות הלוחמים על חוסן משפחתי',
+    impact: 'יצירת חוסן משפחתי: הורים-ילדים וזוגות. בניית תרבות של "משפחה לוחמת" המאפשרת שירות סדיר, קבע ומילואים משמעותיים'
   },
   'shaar-yetzia': {
     leader: 'שי צפדיה',
     description: '"שער היציאה" — הכנה לאזרחות ולתעסוקה, קהילות בוגרים',
     annualBudget: 360000,
     status: 'planning',
-    statusLabel: 'בהתהוות'
+    statusLabel: 'בהתהוות',
+    inputs: 'מנהל קהילה; מנטורים; מאגר מעסיקים בשוק האזרחי',
+    activities: 'תוכנית "שער היציאה" (הכנה לאזרחות); הקמת קהילות בוגרים נושאיות ומסגרתיות',
+    outputs: 'מאגר בוגרים פעיל; בוגרים המשתלבים בתעסוקה איכותית בכל שנה',
+    outcomes: 'השמה מוכחת של 75% מהמשתחררים בתעסוקה איכותית או לימודים תוך חצי שנה; הקמת רשת בוגרים פעילה המונה 1,000 חברים בעמדות מפתח במשק תוך 3 שנים',
+    impact: 'יצירת רשת בוגרים חרדית משרתת המשולבת בעמדות מפתח במשק'
   },
   'welfare-fund': {
     leader: 'מני גפני',
     description: 'מענה לכלל צרכי החטיבה — חייל בודד, משפחות במצוקה, ערבי יחידה',
     annualBudget: 600000,
     status: 'active',
-    statusLabel: 'פעיל / בהתהוות'
+    statusLabel: 'פעיל / בהתהוות',
+    inputs: 'רכז לוגיסטיקה ות"ש; תקציב רכש; מערך תרומות סוציואקונומי; קב"ן רוחני; הפצת עלון שבועי',
+    activities: 'ערבי גיבוש; חלוקת תווי שי; מענה לחיילים בודדים; סיוע כלכלי למשפחות לוחמים במצוקה',
+    outputs: 'אירועי יחידה; ערכות שי; מענקי סיוע למשפחות לוחמים',
+    outcomes: 'מתן מענה ל-100% מפניות הרווחה הדחופות בתוך 48 שעות; דיווח של 90% מהמוטבים על שיפור ישיר במוראל ובשקט הנפשי',
+    impact: 'חטיבת החשמונאים כבית דואג המבטיח גב כלכלי וקהילתי ללוחם ולמשפחתו'
   },
   'admin-general': {
-    leader: 'מנכ״ל',
+    leader: 'מנכ"ל',
     description: 'הנהלה, כספים, מזכירות, גיוס משאבים, מדידה — עד 15% מהתקציב',
     annualBudget: 732000,
     status: 'active',
-    statusLabel: 'תפעולי'
+    statusLabel: 'תפעולי',
+    inputs: 'מנכ"ל, רכז כספים ומזכירות; משרד; ייעוץ משפטי ורו"ח חיצוני; ביטוחים',
+    activities: 'ניהול שוטף, גיוס משאבים, סקרים ומדידת אימפקט, הוצאות קבועות',
+    outputs: 'ניהול תקין, אישורי רגולציה, גיוס תרומות שנתי',
+    outcomes: 'עמידה בעד 15% מסך התקציב; ניהול תקין; שקיפות פיננסית מלאה',
+    impact: 'תשתית ניהולית יציבה ומקצועית התומכת בכלל התוכניות'
   }
 };
 // Build a standard <option> list of the 6 canonical areas. Used by every project/area dropdown.
@@ -2190,6 +2241,25 @@ function renderProgramDetail() {
     <div class="kpi"><div class="icon">👥</div><div class="label">עובדים</div><div class="value">${employees.length}</div></div>
   `;
 
+  // Logic model section (inputs / activities / outputs / outcomes / impact)
+  const logicSections = [
+    { key:'inputs',     icon:'📥', title:'תשומות (Inputs)',    hint:'משאבים מושקעים — תקציב, כוח אדם, ציוד' },
+    { key:'activities', icon:'⚙️', title:'פעולות (Activities)', hint:'פעולות ישירות בשטח' },
+    { key:'outputs',    icon:'📊', title:'תפוקות (Outputs)',    hint:'מדדים כמותיים ישירים — "כמה עשינו"' },
+    { key:'outcomes',   icon:'🎯', title:'תוצאות (Outcomes)',   hint:'השינוי שנוצר — "מה השתנה"' },
+    { key:'impact',     icon:'🌟', title:'אימפקט (Impact)',     hint:'השפעה ארוכת טווח / חזון' }
+  ];
+  const logicEdit = (userRole === 'admin') ? `<button class="btn btn-secondary btn-sm" onclick="openProgramEdit('${k}')">✏️ ערוך</button>` : '';
+  document.getElementById('progDetailLogicEdit').innerHTML = logicEdit;
+  document.getElementById('progDetailLogic').innerHTML = logicSections.map(s => {
+    const val = info[s.key] || '';
+    const display = val ? val.replace(/\n/g,'<br>') : `<em style="color:var(--muted)">לא מוגדר עדיין. ${s.hint}</em>`;
+    return `<div style="background:#f8fafc;padding:14px;border-radius:var(--radius-sm);margin-bottom:10px;border-right:3px solid var(--primary)">
+      <div style="font-weight:600;color:var(--primary-dark);margin-bottom:6px;font-size:0.95rem">${s.icon} ${s.title}</div>
+      <div style="color:var(--dark);font-size:0.9rem;line-height:1.6">${display}</div>
+    </div>`;
+  }).join('');
+
   // Goals + KPIs from workplan
   const wpAreas = workplanCache?.areas?.[k] || {};
   let goalsHtml = `<div style="background:var(--primary-soft);padding:12px;border-radius:var(--radius);margin-bottom:12px"><strong>${DEFAULT_AREA_GOALS[k]||''}</strong></div>`;
@@ -2295,8 +2365,27 @@ function openProgramEdit(key) {
       <div class="form-field"><label>תווית סטטוס מותאמת</label><input type="text" id="pe_statusLabel" value="${info.statusLabel||''}"></div>
     </div>
     <div class="form-row">
-      <div class="form-field" style="grid-column:1/-1"><label>תיאור התוכנית</label><textarea id="pe_description" rows="3">${info.description||''}</textarea></div>
+      <div class="form-field" style="grid-column:1/-1"><label>תיאור התוכנית</label><textarea id="pe_description" rows="2">${info.description||''}</textarea></div>
     </div>
+
+    <h4 style="margin:18px 0 10px;color:var(--primary);border-bottom:2px solid var(--gold);padding-bottom:6px">📐 מודל הלוגיקה</h4>
+
+    <div class="form-row">
+      <div class="form-field" style="grid-column:1/-1"><label>📥 תשומות (Inputs)</label><textarea id="pe_inputs" rows="2" placeholder="משאבים מושקעים — תקציב, כוח אדם, ציוד">${info.inputs||''}</textarea></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field" style="grid-column:1/-1"><label>⚙️ פעולות (Activities)</label><textarea id="pe_activities" rows="2" placeholder="הפעולות הישירות המתבצעות בשטח">${info.activities||''}</textarea></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field" style="grid-column:1/-1"><label>📊 תפוקות (Outputs)</label><textarea id="pe_outputs" rows="2" placeholder="מדדים כמותיים ישירים — שעות, אירועים, משתתפים">${info.outputs||''}</textarea></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field" style="grid-column:1/-1"><label>🎯 תוצאות (Outcomes)</label><textarea id="pe_outcomes" rows="2" placeholder="השינוי שנוצר — אחוזים, יעדים מדידים">${info.outcomes||''}</textarea></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field" style="grid-column:1/-1"><label>🌟 אימפקט (Impact)</label><textarea id="pe_impact" rows="2" placeholder="ההשפעה ארוכת הטווח והחזון">${info.impact||''}</textarea></div>
+    </div>
+
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
       <button class="btn btn-secondary" onclick="closeProgramEdit()">ביטול</button>
       <button class="btn btn-primary" onclick="saveProgramEdit('${key}')">💾 שמור שינויים</button>
@@ -2329,7 +2418,12 @@ async function saveProgramEdit(key) {
     annualBudget: parseInt(document.getElementById('pe_budget').value) || 0,
     status: document.getElementById('pe_status').value,
     statusLabel: document.getElementById('pe_statusLabel').value.trim(),
-    description: document.getElementById('pe_description').value.trim()
+    description: document.getElementById('pe_description').value.trim(),
+    inputs: document.getElementById('pe_inputs').value.trim(),
+    activities: document.getElementById('pe_activities').value.trim(),
+    outputs: document.getElementById('pe_outputs').value.trim(),
+    outcomes: document.getElementById('pe_outcomes').value.trim(),
+    impact: document.getElementById('pe_impact').value.trim()
   };
   // Save into currentOrgInfo.programs[key]
   if (!currentOrgInfo) currentOrgInfo = {};
