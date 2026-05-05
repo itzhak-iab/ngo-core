@@ -383,7 +383,7 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
       <button type="button" id="i18n-en-btn" onclick="setAppLang('en')" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#fff;cursor:pointer;font-size:0.82rem">🇬🇧 English</button>
     </div>
     <div class="nav-item logout" onclick="signOutUser()"><span class="icon">🚪</span> <span data-i18n="nav.logout">התנתק</span></div>
-    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.05-r25</div>
+    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.05-r26</div>
   </aside>
 
   <!-- Main Content -->
@@ -685,63 +685,15 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
     <!-- ============================================================ -->
     <!-- ============================================================ -->
     <!-- PROGRAM DETAIL — drill-down view per program (area)            -->
+    <!-- Single root container; all content rendered via JS in one pass -->
     <!-- ============================================================ -->
     <div class="section" id="sec-program">
-      <div class="page-header">
-        <button class="btn btn-secondary btn-sm" onclick="switchSectionByName('dashboard')" style="margin-bottom:8px">← חזרה לדשבורד</button>
-        <h1 id="progDetailTitle">תוכנית</h1>
-        <p id="progDetailLeader" style="color:var(--muted)"></p>
-      </div>
-
-      <!-- Top KPIs -->
-      <div class="kpi-grid" id="progDetailKpis"></div>
-
-      <!-- Logic Model — inputs / activities / outputs / outcomes / impact -->
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-          <h3 style="margin:0">📐 מודל הלוגיקה של התוכנית</h3>
-          <span id="progDetailLogicEdit"></span>
+      <div id="progDetailRoot">
+        <div class="page-header">
+          <button class="btn btn-secondary btn-sm" onclick="switchSectionByName('dashboard')" style="margin-bottom:8px">← חזרה לדשבורד</button>
+          <h1>בחרי תוכנית מהדשבורד</h1>
+          <p style="color:var(--muted)">לחצי על אחד מ-7 כרטיסי התוכנית בדף הראשי, או על שם תוכנית בסרגל הימני.</p>
         </div>
-        <div id="progDetailLogic"></div>
-      </div>
-
-      <!-- Goals + KPIs (read from workplan) -->
-      <div class="card">
-        <h3>🎯 יעדים ומדדי תוצאה</h3>
-        <div id="progDetailGoals"></div>
-      </div>
-
-      <!-- Budget summary -->
-      <div class="card">
-        <h3>💰 תקציב וביצוע</h3>
-        <div id="progDetailBudget"></div>
-      </div>
-
-      <!-- Tasks filtered to this program -->
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-          <h3 style="margin:0">✅ משימות פתוחות בתוכנית</h3>
-          <button class="btn btn-secondary btn-sm" onclick="switchSectionByName('tasks')">לכל המשימות →</button>
-        </div>
-        <div id="progDetailTasks"></div>
-      </div>
-
-      <!-- Employees + leaders -->
-      <div class="card">
-        <h3>👥 עובדים ומובילי תוכנית</h3>
-        <div id="progDetailEmployees"></div>
-      </div>
-
-      <!-- Vehicles assigned -->
-      <div class="card">
-        <h3>🚗 רכבים משויכים</h3>
-        <div id="progDetailVehicles"></div>
-      </div>
-
-      <!-- Recent activity (finance + reports for this area) -->
-      <div class="card">
-        <h3>📊 פעילות פיננסית אחרונה</h3>
-        <div id="progDetailFinance"></div>
       </div>
     </div>
 
@@ -2247,37 +2199,23 @@ function renderProgramDetail() {
 }
 
 function _renderProgramDetailInner() {
+  const root = document.getElementById('progDetailRoot');
+  if (!root) { console.warn('[program] root missing'); return; }
+
   if (!_currentProgramKey) {
-    document.getElementById('progDetailTitle').textContent = 'בחרי תוכנית';
-    document.getElementById('progDetailLeader').textContent = 'חזרי לדשבורד ולחצי על אחת התוכניות';
+    root.innerHTML = `<div class="page-header">
+      <button class="btn btn-secondary btn-sm" onclick="switchSectionByName('dashboard')" style="margin-bottom:8px">← חזרה לדשבורד</button>
+      <h1>בחרי תוכנית מהדשבורד</h1>
+      <p style="color:var(--muted)">לחצי על אחד מ-7 כרטיסי התוכנית בדף הראשי, או על שם תוכנית בסרגל הימני.</p>
+    </div>`;
     return;
   }
+
   const k = _currentProgramKey;
   const info = getProgramInfo(k) || {};
   const label = getOrgAreaLabel(k) || k;
 
-  document.getElementById('progDetailTitle').textContent = label;
-  const leaderEl = document.getElementById('progDetailLeader');
-  const editBtn = (userRole === 'admin') ? `<button class="btn btn-secondary btn-sm" onclick="openProgramEdit('${k}')" style="margin-right:10px">✏️ ערוך פרטי תוכנית</button>` : '';
-  leaderEl.innerHTML = `מוביל/ת: <strong>${info.leader || '—'}</strong> · ${info.description || ''} ${editBtn}`;
-
-  // Quick action buttons
-  const quickActions = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
-    <button class="btn btn-primary" onclick="quickAddExpenseToProgram('${k}')">+ החזר הוצאות לתוכנית</button>
-    <button class="btn btn-secondary" onclick="quickAddIncomeToProgram('${k}')">+ הזנת הכנסה</button>
-    <button class="btn btn-secondary" onclick="quickAddTaskToProgram('${k}')">+ משימה חדשה</button>
-  </div>`;
-  // Insert/update the quick actions row before the KPIs
-  let qa = document.getElementById('progDetailQuickActions');
-  if (!qa) {
-    qa = document.createElement('div');
-    qa.id = 'progDetailQuickActions';
-    const kpis = document.getElementById('progDetailKpis');
-    kpis.parentNode.insertBefore(qa, kpis);
-  }
-  qa.innerHTML = quickActions;
-
-  // KPIs
+  // Aggregate stats
   const tasks = (tasksCache||[]).filter(t => t.area === k);
   const openTasks = tasks.filter(t => t.status !== 'done' && t.status !== 'cancelled');
   const overdueTasks = openTasks.filter(t => daysDelta(t.dueDate) < 0);
@@ -2285,17 +2223,12 @@ function _renderProgramDetailInner() {
   const finanRecords = (financeCache||[]).filter(r => r.purpose === k);
   const totalSpent = finanRecords.filter(r => r.type === 'expense').reduce((s,r) => s + (r.amount||0), 0);
   const totalRaised = finanRecords.filter(r => r.type === 'income').reduce((s,r) => s + (r.amount||0), 0);
+  const gap = (info.annualBudget||0) - totalRaised;
+  const spentPct = info.annualBudget ? Math.round(totalSpent / info.annualBudget * 100) : 0;
 
-  document.getElementById('progDetailKpis').innerHTML = `
-    <div class="kpi"><div class="icon">💰</div><div class="label">תקציב שנתי</div><div class="value">₪${(info.annualBudget||0).toLocaleString()}</div></div>
-    <div class="kpi"><div class="icon">📥</div><div class="label">גויס לתוכנית</div><div class="value">₪${totalRaised.toLocaleString()}</div></div>
-    <div class="kpi"><div class="icon">📤</div><div class="label">הוצא בפועל</div><div class="value">₪${totalSpent.toLocaleString()}</div></div>
-    <div class="kpi"><div class="icon">✅</div><div class="label">משימות פתוחות</div><div class="value">${openTasks.length}</div></div>
-    <div class="kpi"><div class="icon">⚠️</div><div class="label">באיחור</div><div class="value" style="color:var(--danger)">${overdueTasks.length}</div></div>
-    <div class="kpi"><div class="icon">👥</div><div class="label">עובדים</div><div class="value">${employees.length}</div></div>
-  `;
+  const editBtn = (userRole === 'admin') ? `<button class="btn btn-secondary btn-sm" onclick="openProgramEdit('${k}')">✏️ ערוך פרטי תוכנית</button>` : '';
 
-  // Logic model section (inputs / activities / outputs / outcomes / impact)
+  // Logic model
   const logicSections = [
     { key:'inputs',     icon:'📥', title:'תשומות (Inputs)',    hint:'משאבים מושקעים — תקציב, כוח אדם, ציוד' },
     { key:'activities', icon:'⚙️', title:'פעולות (Activities)', hint:'פעולות ישירות בשטח' },
@@ -2303,9 +2236,7 @@ function _renderProgramDetailInner() {
     { key:'outcomes',   icon:'🎯', title:'תוצאות (Outcomes)',   hint:'השינוי שנוצר — "מה השתנה"' },
     { key:'impact',     icon:'🌟', title:'אימפקט (Impact)',     hint:'השפעה ארוכת טווח / חזון' }
   ];
-  const logicEdit = (userRole === 'admin') ? `<button class="btn btn-secondary btn-sm" onclick="openProgramEdit('${k}')">✏️ ערוך</button>` : '';
-  document.getElementById('progDetailLogicEdit').innerHTML = logicEdit;
-  document.getElementById('progDetailLogic').innerHTML = logicSections.map(s => {
+  const logicHtml = logicSections.map(s => {
     const val = info[s.key] || '';
     const display = val ? val.replace(/\n/g,'<br>') : `<em style="color:var(--muted)">לא מוגדר עדיין. ${s.hint}</em>`;
     return `<div style="background:#f8fafc;padding:14px;border-radius:var(--radius-sm);margin-bottom:10px;border-right:3px solid var(--primary)">
@@ -2314,7 +2245,7 @@ function _renderProgramDetailInner() {
     </div>`;
   }).join('');
 
-  // Goals + KPIs from workplan
+  // Goals from workplan
   const wpAreas = workplanCache?.areas?.[k] || {};
   let goalsHtml = `<div style="background:var(--primary-soft);padding:12px;border-radius:var(--radius);margin-bottom:12px"><strong>${DEFAULT_AREA_GOALS[k]||''}</strong></div>`;
   if (wpAreas.goals) goalsHtml += `<div style="margin-bottom:12px;white-space:pre-wrap;line-height:1.6">${wpAreas.goals}</div>`;
@@ -2328,29 +2259,16 @@ function _renderProgramDetailInner() {
       </div>`;
     });
   } else {
-    goalsHtml += '<p style="color:var(--muted);font-style:italic;font-size:0.88rem">אין מדדים מוגדרים. הגדירו ב<a href="#workplan" style="color:var(--gold)">תוכנית עבודה שנתית</a>.</p>';
+    goalsHtml += '<p style="color:var(--muted);font-style:italic;font-size:0.88rem">אין מדדים מוגדרים בתוכנית עבודה.</p>';
   }
   goalsHtml += `<div style="margin-top:12px;text-align:right"><button class="btn btn-secondary btn-sm" onclick="switchSectionByName('workplan')">✏️ עריכה בתוכנית עבודה</button></div>`;
-  document.getElementById('progDetailGoals').innerHTML = goalsHtml;
 
-  // Budget summary
-  const gap = (info.annualBudget||0) - totalRaised;
-  const spentPct = info.annualBudget ? Math.round(totalSpent / info.annualBudget * 100) : 0;
-  document.getElementById('progDetailBudget').innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px">
-      <div style="background:#f0fdf4;padding:12px;border-radius:var(--radius-sm);border-right:3px solid var(--success)"><div style="color:var(--muted);font-size:0.78rem">גויס</div><div style="font-size:1.2rem;font-weight:700">₪${totalRaised.toLocaleString()}</div></div>
-      <div style="background:#fffbeb;padding:12px;border-radius:var(--radius-sm);border-right:3px solid var(--warning)"><div style="color:var(--muted);font-size:0.78rem">פער למימון</div><div style="font-size:1.2rem;font-weight:700;color:${gap>0?'var(--danger)':'var(--success)'}">₪${Math.max(0,gap).toLocaleString()}</div></div>
-      <div style="background:var(--primary-soft);padding:12px;border-radius:var(--radius-sm);border-right:3px solid var(--primary)"><div style="color:var(--muted);font-size:0.78rem">% מנוצל</div><div style="font-size:1.2rem;font-weight:700">${spentPct}%</div></div>
-    </div>
-    <div style="background:var(--border);height:12px;border-radius:6px;overflow:hidden;margin-bottom:6px"><div style="width:${spentPct}%;height:100%;background:linear-gradient(90deg,var(--primary),var(--gold))"></div></div>
-    <small style="color:var(--muted)">תקציב שנתי מתוכנן: ₪${(info.annualBudget||0).toLocaleString()}</small>
-  `;
-
-  // Tasks
+  // Tasks list
+  let tasksHtml;
   if (openTasks.length === 0) {
-    document.getElementById('progDetailTasks').innerHTML = '<div class="empty-state" style="padding:14px">אין משימות פתוחות בתוכנית הזו</div>';
+    tasksHtml = '<div class="empty-state" style="padding:14px">אין משימות פתוחות בתוכנית הזו</div>';
   } else {
-    document.getElementById('progDetailTasks').innerHTML = '<table class="data-table"><thead><tr><th>משימה</th><th>אחראי</th><th>יעד</th><th>עדיפות</th></tr></thead><tbody>' +
+    tasksHtml = '<table class="data-table"><thead><tr><th>משימה</th><th>אחראי</th><th>יעד</th><th>עדיפות</th></tr></thead><tbody>' +
       openTasks.slice(0,10).map(t => {
         const assignees = (t.assigneeNames||t.assignees||[]).join(', ') || '—';
         const overdue = daysDelta(t.dueDate) < 0;
@@ -2359,37 +2277,84 @@ function _renderProgramDetailInner() {
       (openTasks.length > 10 ? `<small style="color:var(--muted)">מציג 10 מתוך ${openTasks.length} משימות פתוחות</small>` : '');
   }
 
-  // Employees
-  if (employees.length === 0) {
-    document.getElementById('progDetailEmployees').innerHTML = `<div class="empty-state" style="padding:14px">אין עובדים משויכים לתוכנית הזו עדיין. <a href="#team" onclick="switchSectionByName('team');return false" style="color:var(--gold)">לעבור לניהול צוות →</a></div>`;
-  } else {
-    document.getElementById('progDetailEmployees').innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">' +
-      employees.map(e => `<div style="background:var(--primary-soft);padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border)">
-        <div style="font-weight:600">${e.name||e.email}</div>
-        <div style="font-size:0.78rem;color:var(--muted)">${ROLES[e.role]||e.role||'—'}</div>
-      </div>`).join('') + '</div>';
-  }
+  // Employees list
+  const employeesHtml = employees.length === 0
+    ? `<div class="empty-state" style="padding:14px">אין עובדים משויכים לתוכנית הזו עדיין</div>`
+    : '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">' +
+      employees.map(e => `<div style="background:var(--primary-soft);padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border)"><div style="font-weight:600">${e.name||e.email}</div><div style="font-size:0.78rem;color:var(--muted)">${ROLES[e.role]||e.role||'—'}</div></div>`).join('') + '</div>';
 
-  // Vehicles
-  const vehicles = (vehiclesCache||[]).filter(v => v.area === k || (v.programs||[]).includes(k));
-  if (vehicles.length === 0) {
-    document.getElementById('progDetailVehicles').innerHTML = '<div class="empty-state" style="padding:14px">אין רכבים משויכים לתוכנית הזו</div>';
-  } else {
-    document.getElementById('progDetailVehicles').innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">' +
-      vehicles.map(v => `<div style="background:#fff;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border)">
-        <div style="font-weight:600">${v.make||''} ${v.model||''}</div>
-        <div style="font-family:monospace;font-size:0.85rem;color:var(--muted)">${v.plate||'—'}</div>
-      </div>`).join('') + '</div>';
-  }
-
-  // Finance recent
+  // Recent finance
   const recent = finanRecords.slice().sort((a,b) => (b.purchaseDate||b.date||'').localeCompare(a.purchaseDate||a.date||'')).slice(0,8);
-  if (recent.length === 0) {
-    document.getElementById('progDetailFinance').innerHTML = '<div class="empty-state" style="padding:14px">אין רשומות פיננסיות לתוכנית עדיין</div>';
-  } else {
-    document.getElementById('progDetailFinance').innerHTML = '<table class="data-table"><thead><tr><th>סוג</th><th>תאריך</th><th>סכום</th><th>פירוט</th></tr></thead><tbody>' +
+  const financeHtml = recent.length === 0
+    ? '<div class="empty-state" style="padding:14px">אין רשומות פיננסיות לתוכנית עדיין</div>'
+    : '<table class="data-table"><thead><tr><th>סוג</th><th>תאריך</th><th>סכום</th><th>פירוט</th></tr></thead><tbody>' +
       recent.map(r => `<tr><td>${r.type==='income'?'הכנסה':'הוצאה'}</td><td>${fmtDate(r.date||r.purchaseDate)}</td><td class="${r.type==='income'?'amount-positive':'amount-negative'}">₪${(r.amount||0).toLocaleString()}</td><td>${r.description||r.source||'—'}</td></tr>`).join('') + '</tbody></table>';
-  }
+
+  // Render the entire section in one shot
+  root.innerHTML = `
+    <div class="page-header">
+      <button class="btn btn-secondary btn-sm" onclick="switchSectionByName('dashboard')" style="margin-bottom:8px">← חזרה לדשבורד</button>
+      <h1>${label}</h1>
+      <p style="color:var(--muted)">מוביל/ת: <strong>${info.leader || '—'}</strong> · ${info.description || ''} ${editBtn}</p>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
+      <button class="btn btn-primary" onclick="quickAddExpenseToProgram('${k}')">+ החזר הוצאות לתוכנית</button>
+      <button class="btn btn-secondary" onclick="quickAddIncomeToProgram('${k}')">+ הזנת הכנסה</button>
+      <button class="btn btn-secondary" onclick="quickAddTaskToProgram('${k}')">+ משימה חדשה</button>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi"><div class="icon">💰</div><div class="label">תקציב שנתי</div><div class="value">₪${(info.annualBudget||0).toLocaleString()}</div></div>
+      <div class="kpi"><div class="icon">📥</div><div class="label">גויס לתוכנית</div><div class="value">₪${totalRaised.toLocaleString()}</div></div>
+      <div class="kpi"><div class="icon">📤</div><div class="label">הוצא בפועל</div><div class="value">₪${totalSpent.toLocaleString()}</div></div>
+      <div class="kpi"><div class="icon">✅</div><div class="label">משימות פתוחות</div><div class="value">${openTasks.length}</div></div>
+      <div class="kpi"><div class="icon">⚠️</div><div class="label">באיחור</div><div class="value" style="color:var(--danger)">${overdueTasks.length}</div></div>
+      <div class="kpi"><div class="icon">👥</div><div class="label">עובדים</div><div class="value">${employees.length}</div></div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <h3 style="margin:0">📐 מודל הלוגיקה של התוכנית</h3>
+        ${editBtn}
+      </div>
+      ${logicHtml}
+    </div>
+
+    <div class="card">
+      <h3>🎯 יעדים ומדדי תוצאה</h3>
+      ${goalsHtml}
+    </div>
+
+    <div class="card">
+      <h3>💰 תקציב וביצוע</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px">
+        <div style="background:#f0fdf4;padding:12px;border-radius:var(--radius-sm);border-right:3px solid var(--success)"><div style="color:var(--muted);font-size:0.78rem">גויס</div><div style="font-size:1.2rem;font-weight:700">₪${totalRaised.toLocaleString()}</div></div>
+        <div style="background:#fffbeb;padding:12px;border-radius:var(--radius-sm);border-right:3px solid var(--warning)"><div style="color:var(--muted);font-size:0.78rem">פער למימון</div><div style="font-size:1.2rem;font-weight:700;color:${gap>0?'var(--danger)':'var(--success)'}">₪${Math.max(0,gap).toLocaleString()}</div></div>
+        <div style="background:var(--primary-soft);padding:12px;border-radius:var(--radius-sm);border-right:3px solid var(--primary)"><div style="color:var(--muted);font-size:0.78rem">% מנוצל</div><div style="font-size:1.2rem;font-weight:700">${spentPct}%</div></div>
+      </div>
+      <div style="background:var(--border);height:12px;border-radius:6px;overflow:hidden;margin-bottom:6px"><div style="width:${spentPct}%;height:100%;background:linear-gradient(90deg,var(--primary),var(--gold))"></div></div>
+      <small style="color:var(--muted)">תקציב שנתי מתוכנן: ₪${(info.annualBudget||0).toLocaleString()}</small>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <h3 style="margin:0">✅ משימות פתוחות בתוכנית</h3>
+        <button class="btn btn-secondary btn-sm" onclick="switchSectionByName('tasks')">לכל המשימות →</button>
+      </div>
+      ${tasksHtml}
+    </div>
+
+    <div class="card">
+      <h3>👥 עובדים ומובילי תוכנית</h3>
+      ${employeesHtml}
+    </div>
+
+    <div class="card">
+      <h3>📊 פעילות פיננסית אחרונה</h3>
+      ${financeHtml}
+    </div>
+  `;
 }
 
 // ============================================================
