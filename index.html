@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>מערכת ניהול - עמותת החשמונאים</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#1a8a9a">
@@ -383,7 +386,7 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
       <button type="button" id="i18n-en-btn" onclick="setAppLang('en')" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#fff;cursor:pointer;font-size:0.82rem">🇬🇧 English</button>
     </div>
     <div class="nav-item logout" onclick="signOutUser()"><span class="icon">🚪</span> <span data-i18n="nav.logout">התנתק</span></div>
-    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.05-r28</div>
+    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.05-r29</div>
   </aside>
 
   <!-- Main Content -->
@@ -1549,9 +1552,14 @@ firebase.initializeApp({
 
 const db = firebase.firestore();
 const auth = firebase.auth();
+// Explicit persistence — keep user signed in across reloads
+try {
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e => console.warn('[auth] persistence:', e));
+} catch(e) {}
 const storage = firebase.storage();
 let currentUser = null;
 let userRole = null;
+console.log('%c[ruach-manage] v2026.05.05-r29 loaded', 'color:#1a8a9a;font-weight:bold');
 
 // ===== PURPOSE / AREA DICTIONARIES =====
 // The 6 canonical "areas" = the operational programs of the association.
@@ -1915,24 +1923,26 @@ function signIn() {
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
 
-  // Use redirect flow as primary — much more reliable than popups across browsers/devices.
-  // signInWithRedirect navigates the page; result is collected by getRedirectResult() on return.
-  auth.signInWithRedirect(provider).catch(e => {
-    console.error('[signIn]', e);
-    _signInInFlight = false;
-    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
-    const code = e?.code || '';
-    if (code === 'auth/unauthorized-domain' || /requested action is invalid/i.test(e?.message||'')) {
-      showLoginError(
-        'הדומיין לא מאושר ב-Firebase',
-        'יש להוסיף את הדומיין הנוכחי לרשימת "Authorized domains" ב-Firebase Console.'
-      );
-    } else if (code === 'auth/network-request-failed') {
-      showLoginError('בעיית רשת', 'בדקי חיבור לאינטרנט ונסי שוב.');
-    } else {
-      showLoginError('שגיאת התחברות', e.message || code);
-    }
-  });
+  // Try popup first — gives clearer error feedback and avoids redirect loops.
+  auth.signInWithPopup(provider)
+    .then(() => { _signInInFlight = false; if (btn) { btn.disabled = false; btn.style.opacity = ''; } })
+    .catch(e => {
+      console.error('[signIn]', e);
+      _signInInFlight = false;
+      if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+      const code = e?.code || '';
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        showLoginError('הכניסה בוטלה', 'לחצי שוב כדי להתחבר.');
+      } else if (code === 'auth/popup-blocked') {
+        // Only as last resort: try redirect
+        showLoginError('הדפדפן חוסם חלון קופץ', 'מנסה דרך אחרת...');
+        auth.signInWithRedirect(provider).catch(e2 => showLoginError('שגיאה', e2.message||e2.code));
+      } else if (code === 'auth/unauthorized-domain' || /requested action is invalid/i.test(e?.message||'')) {
+        showLoginError('הדומיין לא מאושר ב-Firebase', 'הוסיפי את הדומיין ל-Authorized domains ב-Firebase Console.');
+      } else {
+        showLoginError('שגיאת התחברות', e.message || code);
+      }
+    });
 }
 
 // Handle redirect result on page load (for mobile / fallback flow)
