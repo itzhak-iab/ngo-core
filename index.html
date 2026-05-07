@@ -387,7 +387,7 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
     </div>
     <div id="fxBadge" style="text-align:center;font-size:0.75rem;color:rgba(255,255,255,0.7);padding:6px 8px;background:rgba(255,255,255,0.06);border-radius:6px;margin:4px 12px 0"></div>
     <div class="nav-item logout" onclick="signOutUser()"><span class="icon">🚪</span> <span data-i18n="nav.logout">התנתק</span></div>
-    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.07-r47</div>
+    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.07-r48</div>
   </aside>
 
   <!-- Main Content -->
@@ -1548,7 +1548,7 @@ try {
 const storage = firebase.storage();
 let currentUser = null;
 let userRole = null;
-console.log('%c[ruach-manage] v2026.05.07-r47 loaded', 'color:#1a8a9a;font-weight:bold');
+console.log('%c[ruach-manage] v2026.05.07-r48 loaded', 'color:#1a8a9a;font-weight:bold');
 
 // ===== PURPOSE / AREA DICTIONARIES =====
 // The 6 canonical "areas" = the operational programs of the association.
@@ -1641,21 +1641,59 @@ const DEFAULT_PROGRAM_INFO = {
     impact: 'לימוד התורה כאבן היסוד בעשיית החטיבה ובחרם הפרטיים או הציבוריים של בוגרי החטיבה — "למען שמו באהבה"'
   },
   'beit-neeman': {
-    leader: 'מלכה אייזנמן',
-    description: 'שידוכים, ליווי חתנים וזוגות, מעטפת למשפחות, קהילת נשות החטיבה',
-    annualBudget: 504000,
+    leader: 'שי צפדיה',
+    description: 'חיזוק התא המשפחתי של לוחמי החטיבה — נשות הלוחמים והוריהם',
+    annualBudget: 456000,
     status: 'active',
     statusLabel: 'פעיל / בהתהוות',
-    costItems: [
-      { name:'מוביל תוכנית (50%)', type:'salary', monthlyAmount:12000, annualAmount:144000, notes:'ריכוז קהילת הנשים והדרכות חתנים' },
-      { name:'אירועי קהילה', type:'operations', monthlyAmount:25000, annualAmount:300000, notes:'מפגשי נשים, כנסה הורים וזוגות' },
-      { name:'הדרכה וייעוץ', type:'service', monthlyAmount:5000, annualAmount:60000, notes:'סדנאות וסבסוד ייעוץ זוגי דחוף' }
+    vision: '"וְהֵשִׁיב לֵב אָבוֹת עַל בָּנִים, וְלֵב בָּנִים עַל אֲבוֹתָם" (מלאכי ג, כד) — מערך הוליסטי שפוגש את הלוחם החרדי ואת התא המשפחתי שלו בכל ציר משמעותי: כבן להוריו, כבעל לאשתו, וכאב לילדיו. שמירה על קדושת התא המשפחתי, על הקשר הבין־דורי, ועל מקומה המרכזי של הרעיה כמייסדת הבית — מפתח לחוסן הלוחם בשטח, להמשך דרכו ההלכתית והרוחנית, ולכך שישוב הביתה כאדם שלם.',
+    targetAudiences: [
+      { name:'נשות הלוחמים', description:'הצעירה הנשואה ללוחם נושאת לבדה משא של ניהול בית, ילדים ולעיתים זוגיות צעירה — בעוד בעלה בשטח. התוכנית מעניקה לה כלים, קהילה תומכת, חיזוק רוחני ורגשי, וליווי אישי וזוגי לאורך השירות ולקראת השחרור.' },
+      { name:'הורי הלוחמים', description:'ההורים, שגדלו בעולם של תורה ועבודה, מתקשים לעיתים להבין את עולמו החדש של בנם הלוחם. התוכנית יוצרת מעטפת חיזוק, שייכות וליווי, ומקנה כלים להתמודדות עם אתגרי השירות הצבאי ועם הדילמות ההלכתיות בשטח.' }
     ],
-    inputs: 'יועצי זוגיות, מדריכי חתנים, מדריכות כלות, רכזת קהילת נשים; תקציב לאירועי הורים ולאירועים ייעודיים לנשות החטיבה',
-    activities: 'ליווי חתנים וכלות (למציאות של נישואין בשירות אינטנסהבי); מפגשי קהילת נשות החטיבה; מערך תמיכה ליולדות',
-    outputs: 'סדנאות זוגיות; קהילת נשים פעילה ותומכת; זוגות מלווים',
-    outcomes: 'ליווי והדרכה ל-100% מהחתנים והכלות בחטיבה; צמצום של 15% בפניות למערך הת"ש על רקע מצוקה זוגית; דיווח חיובי מ-80% מנשות הלוחמים על חוסן משפחתי',
-    impact: 'יצירת חוסן משפחתי: הורים-ילדים וזוגות. בניית תרבות של "משפחה לוחמת" המאפשרת שירות סדיר, קבע ומילואים משמעותיים'
+    goals: [
+      'חיזוק תחושת השייכות והקהילה — הן לנשות הלוחמים והן להוריהם',
+      'חיזוק רוחני ורגשי של התא המשפחתי בעת השירות הצבאי',
+      'העצמה אישית וזוגית — מתן כלים לבניית וניהול בית נאמן בישראל לצד מציאות הלחימה',
+      'חיבור בין־דורי — "והשיב לב אבות על בנים" — חיבור הלוחם לעולמם של הוריו ולהיפך',
+      'רשת תמיכה רב־דורית — סבים, אבות ואחים בוגרים כמלווים אישיים'
+    ],
+    kpis: [
+      'ליווי והדרכה ל-100% מהחתנים והכלות בחטיבה',
+      'צמצום של 15% בפניות למערך הת"ש על רקע מצוקה זוגית',
+      'דיווח חיובי מ-80% מנשות הלוחמים על חוסן משפחתי',
+      'מעטפת חיזוק וליווי פעילה להורים, עם מדידת שיפור בתחושת השותפות הקהילתית'
+    ],
+    meetings: [
+      { date:'י"ט אייר',           title:'ערב גיבוש פתיחה — גדוד יונתן',                  responsible:'אליענה רובינשטיין',           notes:'' },
+      { date:'סביב חג שבועות',       title:'מפגש שייכות חטיבתי + דברי חיזוק',                responsible:'מלכה אייזמן',                  notes:'' },
+      { date:'י"ז בתמוז – ת"ב',     title:'מושגי יסוד והתנהלות צבאית בסיסית',               responsible:'אליענה רובינשטיין',           notes:'תעדוף ראשון' },
+      { date:'חודש אלול',           title:'זוגיות בתקופת הצבא',                              responsible:'מלכה אייזמן',                  notes:'תעדוף ראשון' },
+      { date:'לאחר חגי תשרי',       title:'ערב חוויתי',                                      responsible:'מלכה אייזמן ואליענה רובינשטיין',notes:'' },
+      { date:'חודש חשוון',          title:'התמודדות עם חרדה, דאגה ואי־ודאות',               responsible:'אליענה רובינשטיין',           notes:'תעדוף שני' },
+      { date:'סביב חנוכה',          title:'מפגש חוויתי',                                      responsible:'אליענה רובינשטיין ומלכה אייזמן',notes:'' },
+      { date:'חודש טבת',            title:'כלים להתנהלות כלכלית + תקשורת מקרבת',            responsible:'מלכה אייזמן',                  notes:'תעדוף שני' },
+      { date:'חודש שבט',            title:'חוסן אישי + תמיכה סביב היריון ולידה',            responsible:'אליענה רובינשטיין',           notes:'תעדוף שני' }
+    ],
+    openQuestions: [
+      'הגדרת קהל היעד — האם רק חיילים חרדים, או גם סגל חרד״לי? האם רק לוחמים או גם תומכי לחימה?',
+      'בקשה מהחטיבה לכתיבת "נוהל מתחתן" — הבהרת זכויות ומענים לחיילים לפני נישואין',
+      'איתור מדריכת כלות בעלת הבנה בעולם הלוחם החרדי, בדומה למודל של הרב קליימן'
+    ],
+    testimonials: [
+      { quote:'כשבני יצא לגיוס, פחדתי שאאבד אותו לעולם זר. המפגשים של רוח החשמונאים החזירו לי אותו — ואני, לראשונה, הבנתי את עולמו.', author:'אב לחייל, ירושלים' },
+      { quote:'המפגשים החודשיים נתנו לי שייכות. הבנתי שאני לא לבד, ושיש קהילה שלמה של נשים שעוברות איתי את אותה הדרך.',                author:'רעית חייל, בני ברק' }
+    ],
+    costItems: [
+      { name:'מובילת תוכנית',  type:'salary',     monthlyAmount:8000,  annualAmount:96000,  notes:'הובלת התוכנית מקצה לקצה (שי צפדיה) — ריכוז כלל הגורמים, בניית המפגשים והתכנים, ליווי המשתתפות, ניהול הקשר עם החטיבה, אחריות על הפקה בפועל.' },
+      { name:'אירועי קהילה',   type:'operations', monthlyAmount:25000, annualAmount:300000, notes:'9 מפגשים שנתיים סביב נושאי הליבה: משמעות הגיוס בהיבט תורני, מושגי יסוד והתנהלות צבאית, זוגיות וטהרת המשפחה, חוסן אישי, כלים כלכליים, תקשורת מקרבת, ייעוץ לקראת שחרור.' },
+      { name:'הדרכה וייעוץ',   type:'service',    monthlyAmount:5000,  annualAmount:60000,  notes:'סדנאות וסבסוד ייעוץ זוגי בנושאי חיי משפחה בתקופת הצבא, טהרת המשפחה, תמיכה סביב היריון ולידה, סיוע בנושאי פוריות (רגשי ופרקטי), וייעוץ זוגי לקראת השחרור.' }
+    ],
+    inputs: 'מובילת תוכנית; רכזות קהילה ורכזות פרויקטים; יועצי זוגיות מקצועיים; מדריכי חתנים ומדריכות כלות; תקציב לאירועים ולמפגשים; תקציב למתנות ולסימני הוקרה למשתתפות. צוות ההובלה: מלכה אייזמן (אחראית חטיבתית — בא"ח), אליענה רובינשטיין (אחראית גדוד יונתן), הרב קליימן (מלווה מקצועי).',
+    activities: 'מפגשים פרונטליים סביב שייכות, חיזוק רוחני והעצמה אישית וזוגית — מפגש פרונטלי אחת לחודש ברמה חטיבתית + מפגשים ייעודיים נפרדים של גדוד יונתן. סקר עומק בקרב נשות החיילים לדיוק הצרכים. מעטפת תמיכה משלימה — קבוצות וואטסאפ, מנטוריות וליווי אישי (שיחת טלפון או מפגש שבועי). ליווי וייעוץ זוגי לקראת השחרור. סיוע בנושאי פוריות (רגשי ופרקטי). מפגשי הורים, מפגש עם רבני החטיבה, חוברות שיח לשולחן השבת ורשת מלווים בין־דורית.',
+    outputs: '9 מפגשי קהילה שנתיים; קהילת נשים פעילה ותומכת; זוגות מלווים; חוברות שיח לשולחן השבת; מאגר נתונים מאוחד של משתתפות; רשת מלווים בין־דורית.',
+    outcomes: 'ליווי והדרכה ל-100% מהחתנים והכלות בחטיבה; צמצום של 15% בפניות למערך הת"ש על רקע מצוקה זוגית; דיווח חיובי מ-80% מנשות הלוחמים על חוסן משפחתי.',
+    impact: 'יציבות גדולה יותר בבית, הפחתת שחיקה ובדידות, וחיזוק היכולת של המשפחות להתמודד בצורה מיטיבה עם תקופת השירות ולבנות חיי משפחה איתנים. בית נאמן כתשתית לחזרת הלוחם הביתה כאדם שלם.'
   },
   'shaar-yetzia': {
     leader: 'שי צפדיה',
@@ -2855,6 +2893,63 @@ function _renderProgramDetailInner() {
       <div class="kpi clickable" onclick="drillDown('tasks','overdue')" title="לחץ למשימות באיחור"><div class="icon">⚠️</div><div class="label">משימות באיחור</div><div class="value" style="color:var(--danger)">${overdueTasks.length}</div></div>
     </div>
 
+    ${info.vision ? `
+    <div class="card" style="background:linear-gradient(135deg,var(--primary-soft) 0%,var(--gold-soft) 100%);border-right:4px solid var(--gold)">
+      <h3 style="margin:0 0 8px;color:var(--primary)">✨ חזון התוכנית</h3>
+      <div style="font-size:1.02rem;line-height:1.7;color:var(--dark);font-family:'Frank Ruhl Libre',serif;white-space:pre-wrap">${info.vision}</div>
+    </div>` : ''}
+
+    ${(info.targetAudiences||[]).length ? `
+    <div class="card">
+      <h3 style="margin:0 0 12px">👥 קהלי יעד</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
+        ${(info.targetAudiences||[]).map(a => `
+          <div style="background:var(--primary-soft);padding:14px;border-radius:var(--radius-sm);border-right:3px solid var(--primary)">
+            <div style="font-weight:700;color:var(--primary);margin-bottom:6px;font-size:1.02rem">${a.name||''}</div>
+            <div style="font-size:0.92rem;line-height:1.55;color:var(--dark)">${a.description||''}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : ''}
+
+    ${((info.goals||[]).length || (info.kpis||[]).length) ? `
+    <div class="card">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
+        ${(info.goals||[]).length ? `
+        <div>
+          <h3 style="margin:0 0 10px;color:var(--primary)">🎯 מטרות מרכזיות</h3>
+          <ul style="margin:0;padding-right:20px;line-height:1.7">${(info.goals||[]).map(g => `<li>${g}</li>`).join('')}</ul>
+        </div>` : ''}
+        ${(info.kpis||[]).length ? `
+        <div>
+          <h3 style="margin:0 0 10px;color:var(--primary)">📈 מדדי הצלחה (KPIs)</h3>
+          <ul style="margin:0;padding-right:20px;line-height:1.7">${(info.kpis||[]).map(k => `<li><strong>${k}</strong></li>`).join('')}</ul>
+        </div>` : ''}
+      </div>
+    </div>` : ''}
+
+    ${(info.meetings||[]).length ? `
+    <div class="card">
+      <h3 style="margin:0 0 12px">📅 לוח מפגשים שנתי</h3>
+      <table class="data-table" style="margin:0">
+        <thead><tr><th style="width:130px">תאריך</th><th>כותרת</th><th>אחראי/ת</th><th>הערה</th></tr></thead>
+        <tbody>
+          ${(info.meetings||[]).map(m => `<tr>
+            <td><strong style="color:var(--primary)">${m.date||''}</strong></td>
+            <td>${m.title||''}</td>
+            <td>${m.responsible||''}</td>
+            <td><small style="color:var(--muted)">${m.notes||''}</small></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>` : ''}
+
+    ${(info.openQuestions||[]).length ? `
+    <div class="card" style="background:#fffbeb;border-right:4px solid var(--warning)">
+      <h3 style="margin:0 0 10px">❓ נושאים פתוחים להכרעה</h3>
+      <ul style="margin:0;padding-right:20px;line-height:1.7">${(info.openQuestions||[]).map(q => `<li>${q}</li>`).join('')}</ul>
+    </div>` : ''}
+
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
         <h3 style="margin:0">📐 מודל לוגי של התוכנית</h3>
@@ -2917,6 +3012,19 @@ function _renderProgramDetailInner() {
       </div>
       ${employeesHtml}
     </div>
+
+    ${(info.testimonials||[]).length ? `
+    <div class="card" style="background:var(--gold-soft);border-right:4px solid var(--gold)">
+      <h3 style="margin:0 0 12px">💬 עדויות מהשטח</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
+        ${(info.testimonials||[]).map(t => `
+          <blockquote style="margin:0;padding:14px 18px;background:#fff;border-radius:var(--radius-sm);border-right:3px solid var(--gold);font-style:italic;line-height:1.6">
+            <div style="font-family:'Frank Ruhl Libre',serif;color:var(--dark);font-size:0.97rem">"${t.quote||''}"</div>
+            ${t.author ? `<footer style="margin-top:8px;font-size:0.85rem;color:var(--muted);font-style:normal">— ${t.author}</footer>` : ''}
+          </blockquote>
+        `).join('')}
+      </div>
+    </div>` : ''}
 
     <div class="card">
       <h3>📊 פעילות פיננסית אחרונה</h3>
@@ -3454,6 +3562,31 @@ async function saveProgramAssignments(progKey) {
 // State for the cost items being edited (deep-cloned from program info on open)
 let _peCostItems = [];
 
+// ----- Helpers for structured-list textarea fields -----
+// `parseStringLines`: textarea where each line is a string item
+function parseStringLines(text) {
+  if (!text) return [];
+  return text.split('\n').map(l => l.trim()).filter(Boolean);
+}
+function formatStringLines(arr) {
+  if (!arr || !arr.length) return '';
+  return arr.map(s => String(s).trim()).filter(Boolean).join('\n');
+}
+// `parseStructured`: textarea where each line is "field1 | field2 | field3" (whitespace-trimmed)
+function parseStructured(text, fieldNames) {
+  if (!text) return [];
+  return text.split('\n').map(l => l.trim()).filter(Boolean).map(line => {
+    const parts = line.split('|').map(p => p.trim());
+    const obj = {};
+    fieldNames.forEach((f, i) => { obj[f] = parts[i] || ''; });
+    return obj;
+  });
+}
+function formatStructured(arr, fieldNames) {
+  if (!arr || !arr.length) return '';
+  return arr.map(it => fieldNames.map(f => (it[f]||'').toString().replace(/\s*\|\s*/g, ' / ')).join(' | ')).join('\n');
+}
+
 function renderCostItemsEditor() {
   const wrap = document.getElementById('pe_costItems');
   if (!wrap) return;
@@ -3616,6 +3749,31 @@ function openProgramEdit(key) {
       <div class="form-field" style="grid-column:1/-1"><label>🌟 אימפקט (Impact)</label><textarea id="pe_impact" rows="2" placeholder="ההשפעה ארוכת הטווח והחזון">${info.impact||''}</textarea></div>
     </div>
 
+    <h4 style="margin:18px 0 10px;color:var(--primary);border-bottom:2px solid var(--gold);padding-bottom:6px">📋 שדות מורחבים — חזון, יעדים, מפגשים</h4>
+    <p style="color:var(--muted);font-size:0.82rem;margin:0 0 10px">שדות אלו עוזרים לבנות עמוד תוכנית עשיר ומסמך לתורמים. שדות עם <code>|</code> — רשמו ערך אחד בכל שורה, מופרד ב־<strong>|</strong> (פייפ).</p>
+
+    <div class="form-row">
+      <div class="form-field" style="grid-column:1/-1"><label>✨ חזון התוכנית</label><textarea id="pe_vision" rows="3" placeholder="ציטוט מנחה ופסקת חזון אחת. למשל: '...שמירה על קדושת התא המשפחתי כמפתח לחוסן הלוחם'">${(info.vision||'').replace(/<\/textarea>/gi,'')}</textarea></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field" style="grid-column:1/-1"><label>👥 קהלי יעד <small style="color:var(--muted);font-weight:400">(שורה לכל קהל: <code>שם | תיאור</code>)</small></label><textarea id="pe_audiences" rows="3" placeholder='למשל:&#10;נשות הלוחמים | הצעירה הנשואה ללוחם נושאת לבדה...&#10;הורי הלוחמים | ההורים מתקשים להבין את עולמו...'>${formatStructured(info.targetAudiences||[],['name','description']).replace(/<\/textarea>/gi,'')}</textarea></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field" style="grid-column:1/-1"><label>🎯 מטרות מרכזיות <small style="color:var(--muted);font-weight:400">(מטרה אחת בכל שורה)</small></label><textarea id="pe_goals" rows="4" placeholder='חיזוק תחושת השייכות והקהילה&#10;העצמה אישית וזוגית&#10;חיבור בין־דורי'>${formatStringLines(info.goals||[]).replace(/<\/textarea>/gi,'')}</textarea></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field" style="grid-column:1/-1"><label>📈 מדדי הצלחה (KPIs) <small style="color:var(--muted);font-weight:400">(מדד מדיד אחד בכל שורה)</small></label><textarea id="pe_kpis" rows="3" placeholder='ליווי 100% מהחתנים והכלות&#10;צמצום 15% בפניות לת"ש&#10;דיווח חיובי מ-80% מהמשתתפות'>${formatStringLines(info.kpis||[]).replace(/<\/textarea>/gi,'')}</textarea></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field" style="grid-column:1/-1"><label>📅 לוח מפגשים שנתי <small style="color:var(--muted);font-weight:400">(שורה לכל מפגש: <code>תאריך | כותרת | אחראי | הערה</code>)</small></label><textarea id="pe_meetings" rows="5" placeholder='י"ט אייר | ערב גיבוש פתיחה | אליענה רובינשטיין |&#10;סביב חג שבועות | מפגש שייכות | מלכה אייזמן | תעדוף ראשון'>${formatStructured(info.meetings||[],['date','title','responsible','notes']).replace(/<\/textarea>/gi,'')}</textarea></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field" style="grid-column:1/-1"><label>❓ נושאים פתוחים להכרעה <small style="color:var(--muted);font-weight:400">(שאלה אחת בכל שורה)</small></label><textarea id="pe_questions" rows="3" placeholder='הגדרת קהל היעד — האם רק חיילים חרדים?&#10;כתיבת "נוהל מתחתן"&#10;איתור מדריכת כלות'>${formatStringLines(info.openQuestions||[]).replace(/<\/textarea>/gi,'')}</textarea></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field" style="grid-column:1/-1"><label>💬 עדויות מהשטח <small style="color:var(--muted);font-weight:400">(שורה לכל עדות: <code>הציטוט | מזהה הדובר</code>)</small></label><textarea id="pe_testimonials" rows="3" placeholder='המפגשים החזירו לי את בני | אב לחייל, ירושלים&#10;הבנתי שאני לא לבד | רעית חייל, בני ברק'>${formatStructured(info.testimonials||[],['quote','author']).replace(/<\/textarea>/gi,'')}</textarea></div>
+    </div>
+
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
       <button class="btn btn-secondary" onclick="closeProgramEdit()">ביטול</button>
       <button class="btn btn-primary" onclick="saveProgramEdit('${key}')">💾 שמור שינויים</button>
@@ -3663,7 +3821,15 @@ async function saveProgramEdit(key) {
     activities: document.getElementById('pe_activities').value.trim(),
     outputs: document.getElementById('pe_outputs').value.trim(),
     outcomes: document.getElementById('pe_outcomes').value.trim(),
-    impact: document.getElementById('pe_impact').value.trim()
+    impact: document.getElementById('pe_impact').value.trim(),
+    // Extended structured fields (vision, audiences, goals, kpis, meetings, open questions, testimonials)
+    vision:          (document.getElementById('pe_vision')?.value || '').trim(),
+    targetAudiences: parseStructured(document.getElementById('pe_audiences')?.value || '', ['name','description']),
+    goals:           parseStringLines(document.getElementById('pe_goals')?.value || ''),
+    kpis:            parseStringLines(document.getElementById('pe_kpis')?.value || ''),
+    meetings:        parseStructured(document.getElementById('pe_meetings')?.value || '', ['date','title','responsible','notes']),
+    openQuestions:   parseStringLines(document.getElementById('pe_questions')?.value || ''),
+    testimonials:    parseStructured(document.getElementById('pe_testimonials')?.value || '', ['quote','author'])
   };
   // Save into currentOrgInfo.programs[key]
   if (!currentOrgInfo) currentOrgInfo = {};
