@@ -386,7 +386,7 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
       <button type="button" id="i18n-en-btn" onclick="setAppLang('en')" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#fff;cursor:pointer;font-size:0.82rem">🇬🇧 English</button>
     </div>
     <div class="nav-item logout" onclick="signOutUser()"><span class="icon">🚪</span> <span data-i18n="nav.logout">התנתק</span></div>
-    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.05-r40</div>
+    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.07-r41</div>
   </aside>
 
   <!-- Main Content -->
@@ -1558,7 +1558,7 @@ try {
 const storage = firebase.storage();
 let currentUser = null;
 let userRole = null;
-console.log('%c[ruach-manage] v2026.05.05-r40 loaded', 'color:#1a8a9a;font-weight:bold');
+console.log('%c[ruach-manage] v2026.05.07-r41 loaded', 'color:#1a8a9a;font-weight:bold');
 
 // ===== PURPOSE / AREA DICTIONARIES =====
 // The 6 canonical "areas" = the operational programs of the association.
@@ -2130,8 +2130,11 @@ function showLoginError(text, hint) {
   el.innerHTML = `<strong>${text}</strong>${hint ? `<br><small style="opacity:0.85">${hint}</small>` : ''}`;
 }
 
+// Debug logger — silent by default. Logs to console only.
+// To re-enable visible on-screen debug, set window._showLoginDebug = true.
 function _dbg(msg, color) {
   console.log('[DBG]', msg);
+  if (!window._showLoginDebug) return;
   let el = document.getElementById('loginDebug');
   if (!el) {
     el = document.createElement('div');
