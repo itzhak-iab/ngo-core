@@ -386,7 +386,7 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
       <button type="button" id="i18n-en-btn" onclick="setAppLang('en')" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#fff;cursor:pointer;font-size:0.82rem">🇬🇧 English</button>
     </div>
     <div class="nav-item logout" onclick="signOutUser()"><span class="icon">🚪</span> <span data-i18n="nav.logout">התנתק</span></div>
-    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.05-r38</div>
+    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.05-r39</div>
   </aside>
 
   <!-- Main Content -->
@@ -1379,20 +1379,41 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
         <p>הרשאות גישה למערכת</p>
       </div>
       <div class="card">
-        <h3>הוסף חבר צוות</h3>
+        <h3>הוסף חבר צוות / שותף / תורם</h3>
         <div class="form-row">
           <div class="form-field"><label>אימייל Google</label><input type="email" id="teamEmail" placeholder="user@gmail.com" dir="ltr"></div>
-          <div class="form-field"><label>שם</label><input type="text" id="teamName" placeholder="שם"></div>
-          <div class="form-field"><label>תפקיד</label>
+          <div class="form-field"><label>שם</label><input type="text" id="teamName" placeholder="שם מלא"></div>
+          <div class="form-field"><label>קטגוריה</label>
             <select id="teamRole">
-              <option value="admin">מנהל</option>
-              <option value="team">צוות</option>
-              <option value="ram-plugati">ר"מ פלוגתי</option>
-              <option value="resilience-lead">מוביל תוכנית חוסן ואמונה</option>
-              <option value="educational-director">מנהל חינוכי</option>
-              <option value="grooms-rams-mentor">מוביל תחום חתנים ומדריך ר"מים</option>
-              <option value="viewer">צופה</option>
+              <optgroup label="צוות העמותה">
+                <option value="admin">מנהל</option>
+                <option value="team">צוות (גישת ניהול)</option>
+                <option value="employee">עובד</option>
+                <option value="volunteer">מתנדב</option>
+              </optgroup>
+              <optgroup label="תפקידי חוזה">
+                <option value="ram-plugati">ר"מ פלוגתי</option>
+                <option value="resilience-lead">מוביל תוכנית חוסן ואמונה</option>
+                <option value="educational-director">מנהל חינוכי</option>
+                <option value="grooms-rams-mentor">מוביל תחום חתנים ומדריך ר"מים</option>
+              </optgroup>
+              <optgroup label="צפייה בלבד">
+                <option value="partner-viewer">צופה שותף (גישה לתוכניות שקושר אליהן)</option>
+                <option value="donor-viewer">צופה תורם (גישה מוגבלת)</option>
+                <option value="viewer">צופה כללי</option>
+              </optgroup>
             </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field" style="grid-column:1/-1">
+            <label>שיוך לתוכניות (ניתן לבחור כמה — או "כל התוכניות")</label>
+            <div id="teamProgsWrap" style="background:var(--primary-soft);padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+              <label style="display:inline-flex;align-items:center;gap:6px;margin-left:14px;cursor:pointer;font-weight:600">
+                <input type="checkbox" id="teamProgAll" onchange="toggleAllTeamPrograms()" style="width:16px;height:16px"> כל התוכניות
+              </label>
+              <div id="teamProgsList" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+            </div>
           </div>
         </div>
         <button class="btn btn-primary" onclick="addTeamMember()">+ הוסף</button>
@@ -1537,7 +1558,7 @@ try {
 const storage = firebase.storage();
 let currentUser = null;
 let userRole = null;
-console.log('%c[ruach-manage] v2026.05.05-r38 loaded', 'color:#1a8a9a;font-weight:bold');
+console.log('%c[ruach-manage] v2026.05.05-r39 loaded', 'color:#1a8a9a;font-weight:bold');
 
 // ===== PURPOSE / AREA DICTIONARIES =====
 // The 6 canonical "areas" = the operational programs of the association.
@@ -1702,7 +1723,19 @@ function areaOptionsHTML(selected) {
 }
 const MONTHS = {1:'ינואר',2:'פברואר',3:'מרץ',4:'אפריל',5:'מאי',6:'יוני',7:'יולי',8:'אוגוסט',9:'ספטמבר',10:'אוקטובר',11:'נובמבר',12:'דצמבר'};
 const STATUSES = {active:'פעיל',planning:'בתכנון',done:'הושלם'};
-const ROLES = {admin:'מנהל',team:'צוות','ram-plugati':'ר"מ פלוגתי','resilience-lead':'מוביל תוכנית חוסן ואמונה','educational-director':'מנהל חינוכי','grooms-rams-mentor':'מוביל תחום חתנים ומדריך ר"מים',viewer:'צופה'};
+const ROLES = {
+  admin:'מנהל',
+  team:'צוות',
+  employee:'עובד',
+  volunteer:'מתנדב',
+  'partner-viewer':'צופה שותף',
+  'donor-viewer':'צופה תורם',
+  'ram-plugati':'ר"מ פלוגתי',
+  'resilience-lead':'מוביל תוכנית חוסן ואמונה',
+  'educational-director':'מנהל חינוכי',
+  'grooms-rams-mentor':'מוביל תחום חתנים ומדריך ר"מים',
+  viewer:'צופה'
+};
 const CONTRACT_ROLES = ['ram-plugati','resilience-lead','educational-director','grooms-rams-mentor'];
 
 // ============================================================
@@ -2461,6 +2494,8 @@ function _renderProgramDetailInner() {
       <button class="btn btn-primary" onclick="quickAddExpenseToProgram('${k}')">+ החזר הוצאות לתוכנית</button>
       <button class="btn btn-secondary" onclick="quickAddIncomeToProgram('${k}')">+ הזנת הכנסה</button>
       <button class="btn btn-secondary" onclick="quickAddTaskToProgram('${k}')">+ משימה חדשה</button>
+      <button class="btn btn-secondary" onclick="exportProgramToPDF('${k}','he')" style="background:var(--gold-soft);color:var(--gold-dark);border-color:var(--gold)">📄 ייצוא PDF (עברית)</button>
+      <button class="btn btn-secondary" onclick="exportProgramToPDF('${k}','en')" style="background:var(--gold-soft);color:var(--gold-dark);border-color:var(--gold)">🌐 Export PDF (English)</button>
     </div>
 
     <div class="kpi-grid">
@@ -2540,6 +2575,218 @@ function _renderProgramDetailInner() {
       ${financeHtml}
     </div>
   `;
+}
+
+// ============================================================
+// ===== PROGRAM PDF EXPORT (Hebrew/English, donor-ready)
+// ============================================================
+async function exportProgramToPDF(progKey, lang) {
+  const info = getProgramInfo(progKey);
+  const label = getOrgAreaLabel(progKey);
+  const orgName = (currentOrgInfo && currentOrgInfo.name) || 'עמותת החשמונאים';
+  const orgRegNum = (currentOrgInfo && currentOrgInfo.registrationNumber) || '';
+
+  // Build the content in Hebrew first, then translate if needed
+  const ci = info.costItems || [];
+  const partners = info.partners || [];
+  const ciSum = ci.reduce((s,it) => s + (Number(it.annualAmount)||0), 0);
+  const partnersCommitted = partners.reduce((s,p) => s + (Number(p.annualCommitment)||0), 0);
+  const finRecs = (financeCache||[]).filter(r => r.purpose === progKey);
+  const totalRaised = finRecs.filter(r => r.type==='income').reduce((s,r) => s+(r.amount||0), 0);
+  const totalCommitted = partnersCommitted + totalRaised;
+  const gap = Math.max(0, ciSum - totalCommitted);
+  const fundedPct = ciSum ? Math.round(totalCommitted/ciSum*100) : 0;
+
+  const TYPE_LABELS_HE = {salary:'שכר',lease:'ליסינג',rent:'שכירות',operations:'תפעול',service:'שירותים',equipment:'ציוד',grants:'מענקים',other:'אחר'};
+  const PARTNER_TYPE_HE = PARTNER_TYPE_LABELS;
+
+  // Hebrew content blocks (each paragraph is translatable independently if lang===en)
+  const blocks = {
+    title:        label,
+    orgLine:      `${orgName}${orgRegNum?` · ע.ר. ${orgRegNum}`:''}`,
+    leader:       `מוביל/ת התוכנית: ${info.leader || '—'}`,
+    description:  info.description || '',
+    statusLine:   `סטטוס: ${info.statusLabel || (info.status==='active'?'פעיל':info.status==='planning'?'בתכנון':'')}`,
+    budgetTitle:  'תקציב שנתי',
+    budgetVal:    `₪${ciSum.toLocaleString('en-US')}`,
+    raisedTitle:  'גויס (התחייבויות + תרומות)',
+    raisedVal:    `₪${totalCommitted.toLocaleString('en-US')}`,
+    gapTitle:     'פער למימון',
+    gapVal:       `₪${gap.toLocaleString('en-US')}`,
+    pctTitle:     'אחוז כיסוי',
+    pctVal:       `${fundedPct}%`,
+    inputsTitle:  'תשומות עיקריות',
+    inputs:       info.inputs || '',
+    activitiesTitle: 'פעולות עיקריות',
+    activities:   info.activities || '',
+    outputsTitle: 'תפוקות',
+    outputs:      info.outputs || '',
+    outcomesTitle:'תוצאות מצופות',
+    outcomes:     info.outcomes || '',
+    impactTitle:  'אימפקט (חזון)',
+    impact:       info.impact || '',
+    costItemsTitle: 'פירוט תקציב',
+    partnersTitle:  'שותפים וספונסרים',
+    footer:       `הופק מתוך מערכת הניהול · ${new Date().toLocaleDateString('he-IL')}`
+  };
+
+  // English overrides for static labels
+  const EN_LABELS = {
+    leader: 'Program lead', description: '', statusLine: '',
+    budgetTitle:'Annual Budget', raisedTitle:'Raised (commitments + donations)', gapTitle:'Funding gap', pctTitle:'Coverage',
+    inputsTitle:'Key inputs', activitiesTitle:'Key activities', outputsTitle:'Outputs',
+    outcomesTitle:'Expected outcomes', impactTitle:'Impact (vision)',
+    costItemsTitle:'Budget breakdown', partnersTitle:'Partners & Sponsors',
+    footer: `Generated from internal management system · ${new Date().toLocaleDateString('en-US')}`
+  };
+
+  // Translate via existing translateText helper (Google API or MyMemory fallback)
+  let translated = blocks;
+  if (lang === 'en') {
+    if (typeof translateText !== 'function') {
+      toast('פונקציית התרגום לא זמינה','error');
+      return;
+    }
+    toast('מתרגם… זה יכול לקחת רגע.');
+    const mustTranslate = ['title','orgLine','leader','description','statusLine','inputs','activities','outputs','outcomes','impact'];
+    translated = Object.assign({}, blocks);
+    // Replace static labels
+    Object.keys(EN_LABELS).forEach(k => translated[k] = EN_LABELS[k]);
+    // Translate dynamic content
+    try {
+      for (const k of mustTranslate) {
+        const orig = blocks[k];
+        if (!orig || !orig.trim()) continue;
+        translated[k] = await translateText(orig, 'en');
+      }
+    } catch(e) {
+      console.warn('[exportPDF] translate error', e);
+      toast('תרגום חלקי — התוכן ביצע fallback','error');
+    }
+  }
+
+  // Cost items table rows
+  const ciRows = ci.map(it => {
+    const mode = it.paymentMode || 'cash';
+    const modeStr = lang === 'en' ? (mode==='in-kind'?'In-kind':mode==='subsidized'?'Subsidized':'Cash') : (mode==='in-kind'?'תרומה בעין':mode==='subsidized'?'מסובסד':'מזומן');
+    const typeStr = lang === 'en' ? (it.type||'') : (TYPE_LABELS_HE[it.type]||it.type||'');
+    return `<tr>
+      <td><strong>${it.name||'—'}</strong>${it.notes?`<br><small>${it.notes}</small>`:''}</td>
+      <td>${typeStr}</td>
+      <td>${modeStr}${it.coveredByPartner?` (${it.coveredByPartner})`:''}</td>
+      <td style="text-align:right;font-weight:700">₪${(Number(it.annualAmount)||0).toLocaleString('en-US')}</td>
+    </tr>`;
+  }).join('');
+
+  // Partners table rows
+  const partnerRows = partners.map(p => {
+    const typeStr = lang === 'en' ? p.type : (PARTNER_TYPE_HE[p.type]||p.type);
+    return `<tr>
+      <td><strong>${p.name||'—'}</strong>${p.notes?`<br><small>${p.notes}</small>`:''}</td>
+      <td>${typeStr}</td>
+      <td>${p.contactPerson||'—'}</td>
+      <td style="text-align:right;font-weight:700">₪${(Number(p.annualCommitment)||0).toLocaleString('en-US')}</td>
+    </tr>`;
+  }).join('');
+
+  const dir = lang === 'en' ? 'ltr' : 'rtl';
+  const langAttr = lang === 'en' ? 'en' : 'he';
+
+  // Build the HTML document
+  const docHtml = `<!doctype html><html lang="${langAttr}" dir="${dir}"><head><meta charset="utf-8">
+    <title>${translated.title}</title>
+    <style>
+      @page { margin: 18mm 14mm; }
+      body { font-family: ${lang==='en'?"'Manrope','Segoe UI',Arial,sans-serif":"'David','Times New Roman',serif"}; color:#1f1f1f; line-height:1.55; padding:0; margin:0; direction:${dir}; }
+      .doc { max-width: 21cm; margin: 0 auto; padding: 1cm; }
+      .header { text-align:center; border-bottom: 3px solid #c8a84c; padding-bottom: 16px; margin-bottom: 24px; }
+      h1 { color:#1a8a9a; font-size: 1.8rem; margin: 0 0 6px; font-family: ${lang==='en'?"'Manrope',sans-serif":"'Frank Ruhl Libre',serif"}; font-weight: 900; }
+      .subtitle { color:#666; font-size: 0.95rem; }
+      .leader { background:#fff7e0; padding:10px 14px; border-radius:8px; margin-bottom:18px; border-${lang==='en'?'left':'right'}:3px solid #c8a84c }
+      .kpi-row { display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin-bottom:24px; }
+      .kpi { background:#f0f8fa; padding:14px; border-radius:8px; text-align:center; border:1px solid #d4e8ec; }
+      .kpi .lbl { font-size:0.8rem; color:#666; margin-bottom:4px; }
+      .kpi .val { font-size:1.4rem; font-weight:700; color:#1a8a9a; font-family: ${lang==='en'?"'Manrope',sans-serif":"'Frank Ruhl Libre',serif"}; }
+      h2 { color:#14707d; font-size:1.2rem; margin: 24px 0 10px; padding-bottom:6px; border-bottom:1px solid #d4e8ec; font-family: inherit; font-weight:700; }
+      .block { background:#fafafa; padding:12px 14px; border-radius:6px; border-${lang==='en'?'left':'right'}:3px solid #1a8a9a; margin-bottom:12px; white-space:pre-wrap; }
+      table { width:100%; border-collapse: collapse; margin: 10px 0; }
+      th, td { border:1px solid #d4e8ec; padding:8px 12px; text-align:${lang==='en'?'left':'right'}; }
+      th { background:#f0f8fa; font-weight:600; }
+      .footer { margin-top:30px; padding-top:14px; border-top:1px solid #ccc; text-align:center; font-size:0.8rem; color:#666; }
+      div { page-break-inside: avoid; }
+    </style></head><body>
+    <div class="doc">
+      <div class="header">
+        <h1>${translated.title}</h1>
+        <div class="subtitle">${translated.orgLine}</div>
+      </div>
+
+      <div class="leader">
+        <div><strong>${translated.leader}</strong></div>
+        ${translated.description ? `<div style="margin-top:6px">${translated.description}</div>`:''}
+        ${translated.statusLine ? `<div style="margin-top:6px;font-size:0.85rem;color:#666">${translated.statusLine}</div>`:''}
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi"><div class="lbl">${translated.budgetTitle}</div><div class="val">${translated.budgetVal}</div></div>
+        <div class="kpi"><div class="lbl">${translated.raisedTitle}</div><div class="val">${translated.raisedVal}</div></div>
+        <div class="kpi"><div class="lbl">${translated.gapTitle}</div><div class="val">${translated.gapVal}</div></div>
+        <div class="kpi"><div class="lbl">${translated.pctTitle}</div><div class="val">${translated.pctVal}</div></div>
+      </div>
+
+      <h2>${translated.inputsTitle}</h2>
+      <div class="block">${translated.inputs || (lang==='en'?'—':'—')}</div>
+
+      <h2>${translated.activitiesTitle}</h2>
+      <div class="block">${translated.activities || '—'}</div>
+
+      <h2>${translated.outputsTitle}</h2>
+      <div class="block">${translated.outputs || '—'}</div>
+
+      <h2>${translated.outcomesTitle}</h2>
+      <div class="block">${translated.outcomes || '—'}</div>
+
+      <h2>${translated.impactTitle}</h2>
+      <div class="block" style="background:#fff7e0;border-${lang==='en'?'left':'right'}-color:#c8a84c">${translated.impact || '—'}</div>
+
+      ${ci.length ? `<h2>${translated.costItemsTitle}</h2>
+      <table>
+        <thead><tr>
+          <th>${lang==='en'?'Item':'רכיב'}</th>
+          <th>${lang==='en'?'Type':'סוג'}</th>
+          <th>${lang==='en'?'Coverage':'אופן כיסוי'}</th>
+          <th style="text-align:${lang==='en'?'left':'right'}">${lang==='en'?'Annual Value':'שווי שנתי'}</th>
+        </tr></thead>
+        <tbody>${ciRows}</tbody>
+        <tfoot><tr style="background:#fff7e0;font-weight:700"><td colspan="3">${lang==='en'?'Total':'סה"כ'}</td><td style="text-align:${lang==='en'?'left':'right'}">₪${ciSum.toLocaleString('en-US')}</td></tr></tfoot>
+      </table>`:''}
+
+      ${partners.length ? `<h2>${translated.partnersTitle}</h2>
+      <table>
+        <thead><tr>
+          <th>${lang==='en'?'Name':'שם'}</th>
+          <th>${lang==='en'?'Type':'סוג'}</th>
+          <th>${lang==='en'?'Contact':'איש קשר'}</th>
+          <th style="text-align:${lang==='en'?'left':'right'}">${lang==='en'?'Commitment':'התחייבות'}</th>
+        </tr></thead>
+        <tbody>${partnerRows}</tbody>
+      </table>`:''}
+
+      <div class="footer">${translated.footer}</div>
+    </div>
+  </body></html>`;
+
+  // Print via iframe (same reliable approach as report PDF)
+  const old = document.getElementById('_progPdfIframe');
+  if (old) old.remove();
+  const iframe = document.createElement('iframe');
+  iframe.id = '_progPdfIframe';
+  iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;left:-9999px;top:-9999px';
+  document.body.appendChild(iframe);
+  const idoc = iframe.contentDocument || iframe.contentWindow.document;
+  idoc.open(); idoc.write(docHtml); idoc.close();
+  iframe.onload = () => setTimeout(() => { try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch(e) { console.error(e); } }, 400);
+  setTimeout(() => { if (!iframe._printed) { iframe._printed = true; try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch(e) {} } }, 1200);
 }
 
 // ============================================================
@@ -3375,6 +3622,10 @@ function switchSection(id, el, opts) {
       try { if (typeof loadWorkplan === 'function') await loadWorkplan(); }
       catch(e) { console.warn('workplan load:', e); }
     })();
+  }
+  // Team: render program checkbox list
+  if (id === 'team') {
+    setTimeout(() => { try { renderTeamProgramsList(); } catch(e) {} }, 100);
   }
   // Settings: load form values from currentOrgInfo
   if (id === 'settings') {
@@ -7083,17 +7334,47 @@ async function loadTeam() {
   }).join('');
 }
 
+// Build the program checkbox list in the add-team form
+function renderTeamProgramsList() {
+  const wrap = document.getElementById('teamProgsList');
+  if (!wrap) return;
+  const keys = getOrgAreaKeys();
+  wrap.innerHTML = keys.map(k => `
+    <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#fff;border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer;font-size:0.85rem">
+      <input type="checkbox" class="team-prog-cb" value="${k}" style="width:14px;height:14px">
+      ${getOrgAreaLabel(k)}
+    </label>
+  `).join('');
+}
+
+function toggleAllTeamPrograms() {
+  const all = document.getElementById('teamProgAll')?.checked;
+  document.querySelectorAll('.team-prog-cb').forEach(cb => { cb.checked = all; cb.disabled = all; });
+}
+
 async function addTeamMember() {
   const email = document.getElementById('teamEmail').value.trim().toLowerCase();
   const name = document.getElementById('teamName').value.trim();
   const role = document.getElementById('teamRole').value;
   if (!email) { toast('יש להזין אימייל','error'); return; }
+  // Collect program assignments
+  const allChecked = document.getElementById('teamProgAll')?.checked;
+  const programs = allChecked
+    ? getOrgAreaKeys().slice() // all programs
+    : Array.from(document.querySelectorAll('.team-prog-cb:checked')).map(cb => cb.value);
   try {
-    await db.collection('team').doc(email).set({ name, email, role, orgId: currentOrgId, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    await db.collection('team').doc(email).set({
+      name, email, role,
+      programs,                 // explicit program assignments
+      orgId: currentOrgId,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
     console.log('[SAVE OK] team doc:', email);
     document.getElementById('teamEmail').value = '';
     document.getElementById('teamName').value = '';
-    toast('חבר צוות נוסף!');
+    document.querySelectorAll('.team-prog-cb').forEach(cb => { cb.checked = false; cb.disabled = false; });
+    const all = document.getElementById('teamProgAll'); if (all) all.checked = false;
+    toast(`נוסף ${name||email} (${programs.length} תוכניות) ✓`);
     loadTeam();
   } catch(e) {
     console.error('[SAVE FAIL] team:', e);
