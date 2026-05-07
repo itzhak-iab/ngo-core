@@ -55,10 +55,16 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
 
 /* LOGIN */
 .login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#e6f3f5 0%,#f7f0d9 50%,#e6f3f5 100%)}
-.login-box{background:#fff;border-radius:16px;padding:48px 40px;text-align:center;box-shadow:var(--shadow-lg);max-width:420px;width:90%;border:1px solid var(--border);border-top:4px solid var(--gold)}
-.login-box h1{font-size:1.8rem;color:var(--dark);margin-bottom:8px;font-weight:900;font-family:'Frank Ruhl Libre',serif}
-.login-box p{color:var(--muted);font-size:0.9rem;margin-bottom:32px}
-.login-box .logo{font-size:3rem;margin-bottom:16px}
+.login-box{background:#fff;border-radius:16px;padding:36px 40px;text-align:center;box-shadow:var(--shadow-lg);max-width:580px;width:92%;border:1px solid var(--border);border-top:4px solid var(--gold)}
+.login-box h1{font-size:2rem;color:var(--dark);margin-bottom:6px;font-weight:900;font-family:'Frank Ruhl Libre',serif}
+.login-box p{color:var(--muted);font-size:0.92rem;margin:0 0 8px}
+.login-box .logo{font-size:3rem;margin-bottom:12px}
+.login-box .features{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:20px 0 22px;text-align:right}
+.login-box .feature{background:#f8fafc;padding:10px 12px;border-radius:8px;border-right:3px solid var(--primary);font-size:0.85rem;display:flex;gap:8px;align-items:flex-start}
+.login-box .feature-icon{font-size:1.15rem;flex-shrink:0}
+.login-box .feature strong{display:block;color:var(--primary);margin-bottom:2px}
+.login-box .feature span{color:var(--muted);font-size:0.78rem}
+.login-box .beta-tag{display:inline-block;background:linear-gradient(135deg,var(--gold) 0%,#a87a2a 100%);color:#fff;padding:4px 12px;border-radius:14px;font-size:0.72rem;font-weight:700;margin-bottom:14px;letter-spacing:0.4px}
 .google-btn{display:inline-flex;align-items:center;gap:10px;padding:14px 32px;border-radius:var(--radius-pill);border:1px solid var(--border);background:#fff;cursor:pointer;font-size:1rem;font-weight:600;transition:var(--transition);box-shadow:var(--shadow);min-height:48px;font-family:inherit}
 .google-btn:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);border-color:var(--gold)}
 .google-btn img{width:22px;height:22px}
@@ -296,20 +302,62 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
 
 <!-- LOGIN SCREEN -->
 <div class="login-screen" id="loginScreen">
-  <div class="login-box">
+  <!-- Default landing/login card (shown to non-authenticated visitors) -->
+  <div class="login-box" id="loginPrimaryBox">
     <div class="logo" id="loginLogo">🏛️</div>
+    <span class="beta-tag">בטא · חינם בשלב זה</span>
     <h1>NGO Core</h1>
-    <p style="color:var(--muted);margin:0 0 4px;font-size:0.95rem">מערכת ניהול לעמותות</p>
-    <p style="color:var(--muted);font-size:0.82rem;margin:0 0 14px">Multi-tenant SaaS · ngocore.io</p>
+    <p style="color:var(--dark);font-size:1rem;margin-bottom:6px">מערכת ניהול לעמותות במגזר השלישי</p>
+    <p style="color:var(--muted);font-size:0.86rem;margin-bottom:18px">תוכניות · תקציב · שותפים · שקיפות לתורמים — במקום אחד</p>
+
+    <div class="features">
+      <div class="feature"><span class="feature-icon">💰</span><div><strong>תקציב חי</strong><span>פירוט מקורות מימון, רכיבים, ביצוע — בלחיצה</span></div></div>
+      <div class="feature"><span class="feature-icon">🤝</span><div><strong>ניהול שותפים</strong><span>קרנות, ספונסרים והתחייבויות בכל תוכנית</span></div></div>
+      <div class="feature"><span class="feature-icon">📄</span><div><strong>PDF לתורמים</strong><span>ייצוא דף תוכנית בעברית/אנגלית עם הלוגו שלך</span></div></div>
+      <div class="feature"><span class="feature-icon">👥</span><div><strong>צוות והרשאות</strong><span>מנהלים, עובדים, צופים — לכל אחד מה שצריך</span></div></div>
+    </div>
+
     <button class="google-btn" onclick="signIn()">
       <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
-      כניסה עם חשבון Google
+      התחל עם חשבון Google
     </button>
+    <p style="margin-top:10px;font-size:0.75rem;color:var(--muted)">חינם לארגון אחד בשלב הביטא · ngocore.io</p>
     <div class="login-error" id="loginError"></div>
     <div class="access-denied" id="accessDenied">
       <p>⛔ אין לך הרשאת גישה למערכת.</p>
       <p style="font-size:0.8rem;margin-top:8px;">פנה למנהל המערכת כדי לקבל גישה.</p>
       <button class="btn btn-danger btn-sm" style="margin-top:12px" onclick="signOutUser()">התנתק</button>
+    </div>
+  </div>
+
+  <!-- Self-service onboarding form (shown only after Google sign-in if user has no org yet) -->
+  <div class="login-box" id="onboardingBox" style="display:none;max-width:640px;text-align:right">
+    <div style="text-align:center">
+      <div class="logo" style="font-size:2.4rem;margin-bottom:6px">🎉</div>
+      <h1 style="font-size:1.6rem">ברוך הבא ל-NGO Core</h1>
+      <p style="color:var(--muted);margin-bottom:18px">בוא נקים את הארגון שלך — דקה ואתה בפנים.</p>
+    </div>
+    <div id="onboardingUserBadge" style="background:var(--primary-soft);padding:10px 14px;border-radius:8px;margin-bottom:14px;display:flex;gap:10px;align-items:center"></div>
+    <div class="form-row">
+      <div class="form-field" style="grid-column:1/-1"><label>שם הארגון <span class="req">*</span></label><input type="text" id="onbOrgName" placeholder='למשל: עמותת "אור בנגב" (ע"ר)' autofocus></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>מס׳ ע.ר. <small style="color:var(--muted);font-weight:400">(אופציונלי)</small></label><input type="text" id="onbRegNum" placeholder="580123456" dir="ltr"></div>
+      <div class="form-field"><label>טלפון <small style="color:var(--muted);font-weight:400">(אופציונלי)</small></label><input type="tel" id="onbPhone" placeholder="03-1234567" dir="ltr"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>אימייל ארגוני <small style="color:var(--muted);font-weight:400">(אופציונלי)</small></label><input type="email" id="onbEmail" placeholder="info@yourorg.org.il" dir="ltr"></div>
+      <div class="form-field"><label>אתר <small style="color:var(--muted);font-weight:400">(אופציונלי)</small></label><input type="url" id="onbWebsite" placeholder="https://" dir="ltr"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field" style="grid-column:1/-1"><label>תחום פעילות <small style="color:var(--muted);font-weight:400">(אופציונלי, משפט קצר)</small></label><input type="text" id="onbPurpose" placeholder='למשל: "סיוע למשפחות חיילים בודדים"'></div>
+    </div>
+    <div style="background:var(--gold-soft);padding:10px 14px;border-radius:8px;margin:14px 0;font-size:0.85rem;color:var(--dark);border-right:3px solid var(--gold)">
+      💡 לאחר היצירה תוכל להוסיף לוגו, תוכניות, חברי צוות, ולערוך הכל. הארגון יהיה <strong>פרטי לחלוטין</strong> — רק אנשים שתגדיר יוכלו לראותו.
+    </div>
+    <div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;margin-top:14px">
+      <button class="btn btn-secondary" onclick="signOutUser()" style="font-size:0.88rem">⤴ צא לחשבון אחר</button>
+      <button class="btn btn-primary" onclick="submitNewOrgOnboarding()" id="onbSubmitBtn">🚀 צור ארגון ולהתחיל</button>
     </div>
   </div>
 </div>
@@ -389,7 +437,7 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
     </div>
     <div id="fxBadge" style="text-align:center;font-size:0.75rem;color:rgba(255,255,255,0.7);padding:6px 8px;background:rgba(255,255,255,0.06);border-radius:6px;margin:4px 12px 0"></div>
     <div class="nav-item logout" onclick="signOutUser()"><span class="icon">🚪</span> <span data-i18n="nav.logout">התנתק</span></div>
-    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.07-r59</div>
+    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.07-r60</div>
   </aside>
 
   <!-- Main Content -->
@@ -1583,7 +1631,7 @@ try {
 const storage = firebase.storage();
 let currentUser = null;
 let userRole = null;
-console.log('%c[ruach-manage] v2026.05.07-r59 loaded', 'color:#1a8a9a;font-weight:bold');
+console.log('%c[ruach-manage] v2026.05.07-r60 loaded', 'color:#1a8a9a;font-weight:bold');
 
 // ===== PURPOSE / AREA DICTIONARIES =====
 // The 6 canonical "areas" = the operational programs of the association.
@@ -2465,6 +2513,88 @@ function signOutUser() {
   auth.signOut().then(() => location.reload());
 }
 
+// ============================================================
+// ===== SaaS SELF-SERVICE ONBOARDING ==========================
+// ============================================================
+// Show the new-org form when a logged-in user has no team doc yet
+function showOnboardingForm(user) {
+  document.getElementById('loginScreen').style.display = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginPrimaryBox').style.display = 'none';
+  const ob = document.getElementById('onboardingBox');
+  ob.style.display = '';
+  // Greet the user with their photo + name
+  const badge = document.getElementById('onboardingUserBadge');
+  if (badge) {
+    badge.innerHTML = `
+      <img src="${user.photoURL||''}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover">
+      <div><div style="font-weight:600">${user.displayName||user.email}</div><div style="font-size:0.78rem;color:var(--muted)" dir="ltr">${user.email}</div></div>
+    `;
+  }
+  // If org name input was prefilled previously, clear it
+  ['onbOrgName','onbRegNum','onbPhone','onbEmail','onbWebsite','onbPurpose'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+}
+
+// Validates inputs, creates the org doc + admin team doc, and lands the user inside the new org
+async function submitNewOrgOnboarding() {
+  const u = auth.currentUser;
+  if (!u) { toast('יש להתחבר תחילה','error'); return; }
+  const orgName = document.getElementById('onbOrgName').value.trim();
+  if (!orgName) { toast('שם הארגון הוא חובה','error'); document.getElementById('onbOrgName').focus(); return; }
+
+  const btn = document.getElementById('onbSubmitBtn');
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = '⏳ יוצר ארגון…';
+
+  // Generate a stable orgId: slug of the name + short timestamp suffix
+  const slug = orgName.toLowerCase()
+    .replace(/[֐-׿]/g,'')   // strip Hebrew chars (orgId must be ASCII for Firestore doc id safety)
+    .replace(/[^a-z0-9]+/g,'-')        // non-alnum → hyphen
+    .replace(/^-+|-+$/g,'')
+    .slice(0,20) || 'org';
+  const orgId = `${slug}-${Date.now().toString(36).slice(-5)}`;
+
+  const orgDoc = {
+    name: orgName,
+    registrationNumber: document.getElementById('onbRegNum').value.trim(),
+    phone:    document.getElementById('onbPhone').value.trim(),
+    email:    document.getElementById('onbEmail').value.trim(),
+    website:  document.getElementById('onbWebsite').value.trim(),
+    purpose:  document.getElementById('onbPurpose').value.trim(),
+    createdBy: u.email,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    isSelfOnboarded: true
+  };
+
+  try {
+    // 1. Create the org
+    await db.collection('orgs').doc(orgId).set(orgDoc);
+    // 2. Create the user as admin of that org
+    await db.collection('team').doc(u.email).set({
+      name: u.displayName,
+      email: u.email,
+      photo: u.photoURL,
+      roleTitle: 'מנכ"ל / מנהל',
+      role: 'admin',
+      permission: 'admin',
+      orgId,
+      isFounder: true,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    toast(`ברוך הבא ל-${orgName}! 🎉`);
+    // 3. Reload — the next auth check will find the team doc and enter the app normally
+    setTimeout(() => location.reload(), 800);
+  } catch(e) {
+    console.error('[onboarding]', e);
+    btn.disabled = false;
+    btn.textContent = originalText;
+    toast('שגיאה ביצירת הארגון: ' + (e.message || e.code || ''), 'error');
+  }
+}
+
 auth.onAuthStateChanged(async user => {
   if (typeof _dbg === 'function') _dbg('2️⃣ onAuthStateChanged: user=' + (user?.email || 'NULL'), user ? '#16a34a' : '#dc2626');
   // Public routes (transparency / presentation) — render without login
@@ -2496,27 +2626,11 @@ auth.onAuthStateChanged(async user => {
     }
 
     if (!teamDoc.exists) {
-      if (typeof _dbg === 'function') _dbg('⚠️ אין team doc — בודק אם זה משתמש ראשון', '#d97706');
-      // First user becomes admin automatically
-      let teamSnap;
-      try { teamSnap = await db.collection('team').get(); } catch(e) { teamSnap = { empty: true }; }
-      if (typeof _dbg === 'function') _dbg('team size: ' + (teamSnap.size||0), '#0891b2');
-      if (teamSnap.empty || teamSnap.size === 0) {
-        try {
-          await db.collection('team').doc(user.email).set({
-            name: user.displayName, email: user.email, role: 'admin',
-            photo: user.photoURL, orgId: DEFAULT_ORG_ID,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        } catch(e) { console.warn('Could not write team doc:', e); }
-        userRole = 'admin';
-        currentOrgId = DEFAULT_ORG_ID;
-      } else {
-        document.getElementById('loginScreen').style.display = '';
-        document.getElementById('accessDenied').style.display = 'block';
-        document.querySelector('.google-btn').style.display = 'none';
-        return;
-      }
+      if (typeof _dbg === 'function') _dbg('⚠️ אין team doc — מציג onboarding לארגון חדש', '#d97706');
+      // SaaS self-service: this user has no org yet → show onboarding form to create one.
+      // (super-admins of the platform are already added via team doc)
+      showOnboardingForm(user);
+      return;
     } else {
       const td = teamDoc.data();
       userRole = td.role;
