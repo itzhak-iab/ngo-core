@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>מערכת ניהול - עמותת החשמונאים</title>
+<title>NGO Core — מערכת ניהול לעמותות</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#1a8a9a">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -298,8 +298,9 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
 <div class="login-screen" id="loginScreen">
   <div class="login-box">
     <div class="logo" id="loginLogo">🏛️</div>
-    <h1>מערכת ניהול</h1>
-    <p>עמותת החשמונאים (ע״ר)</p>
+    <h1>NGO Core</h1>
+    <p style="color:var(--muted);margin:0 0 4px;font-size:0.95rem">מערכת ניהול לעמותות</p>
+    <p style="color:var(--muted);font-size:0.82rem;margin:0 0 14px">Multi-tenant SaaS · ngocore.io</p>
     <button class="google-btn" onclick="signIn()">
       <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
       כניסה עם חשבון Google
@@ -388,7 +389,7 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
     </div>
     <div id="fxBadge" style="text-align:center;font-size:0.75rem;color:rgba(255,255,255,0.7);padding:6px 8px;background:rgba(255,255,255,0.06);border-radius:6px;margin:4px 12px 0"></div>
     <div class="nav-item logout" onclick="signOutUser()"><span class="icon">🚪</span> <span data-i18n="nav.logout">התנתק</span></div>
-    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.07-r58</div>
+    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.07-r59</div>
   </aside>
 
   <!-- Main Content -->
@@ -1582,7 +1583,7 @@ try {
 const storage = firebase.storage();
 let currentUser = null;
 let userRole = null;
-console.log('%c[ruach-manage] v2026.05.07-r58 loaded', 'color:#1a8a9a;font-weight:bold');
+console.log('%c[ruach-manage] v2026.05.07-r59 loaded', 'color:#1a8a9a;font-weight:bold');
 
 // ===== PURPOSE / AREA DICTIONARIES =====
 // The 6 canonical "areas" = the operational programs of the association.
