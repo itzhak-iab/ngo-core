@@ -388,7 +388,7 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
     </div>
     <div id="fxBadge" style="text-align:center;font-size:0.75rem;color:rgba(255,255,255,0.7);padding:6px 8px;background:rgba(255,255,255,0.06);border-radius:6px;margin:4px 12px 0"></div>
     <div class="nav-item logout" onclick="signOutUser()"><span class="icon">🚪</span> <span data-i18n="nav.logout">התנתק</span></div>
-    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.07-r57</div>
+    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.07-r58</div>
   </aside>
 
   <!-- Main Content -->
@@ -1582,7 +1582,7 @@ try {
 const storage = firebase.storage();
 let currentUser = null;
 let userRole = null;
-console.log('%c[ruach-manage] v2026.05.07-r57 loaded', 'color:#1a8a9a;font-weight:bold');
+console.log('%c[ruach-manage] v2026.05.07-r58 loaded', 'color:#1a8a9a;font-weight:bold');
 
 // ===== PURPOSE / AREA DICTIONARIES =====
 // The 6 canonical "areas" = the operational programs of the association.
@@ -2817,8 +2817,9 @@ function _renderProgramDetailInner() {
   const subsidizedSum = costItems.filter(it => it.paymentMode === 'subsidized').reduce((s,it) => s + (Number(it.annualAmount)||0), 0);
   const TYPE_LABELS = {salary:'שכר',lease:'ליסינג',rent:'שכירות',operations:'תפעול',service:'שירותים',equipment:'ציוד',grants:'מענקים',other:'אחר'};
   const customCols = info.costColumnsCustom || [];
-  // Inline-editable budget table (Excel-like for admins/editors, read-only otherwise)
-  const costItemsHtml = _renderEditableBudgetTable(k, costItems, customCols, _canEdit);
+  const _isBudgetEditing = (_budgetEditingProg === k);
+  // Read-only by default; toggles to inline-editable Excel-like view when user clicks "ערוך טבלה"
+  const costItemsHtml = _renderEditableBudgetTable(k, costItems, customCols, _canEdit, _isBudgetEditing);
 
   // Goals from workplan
   const wpAreas = workplanCache?.areas?.[k] || {};
@@ -3079,11 +3080,11 @@ function _renderProgramDetailInner() {
       ${partnersCommitted+totalRaised+inkindSum+subsidizedSum+gap === 0 ? '<p style="text-align:center;color:var(--muted);font-style:italic;margin:0 0 18px">לא הוגדרו עדיין מקורות מימון. הוסף שותפים, רשומות פיננסיות, או רכיבי תקציב.</p>' : ''}
 
       <!-- 📤 USES OF FUNDS — שימושי תקציב -->
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:24px 0 8px">
-        <h4 style="margin:0;color:var(--primary);border-bottom:2px solid var(--gold);padding-bottom:6px;flex:1">📤 שימושי תקציב — לאן הולך הכסף</h4>
-        ${editBtn}
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:24px 0 8px;border-bottom:2px solid var(--gold);padding-bottom:6px">
+        <h4 style="margin:0;color:var(--primary)">📤 שימושי תקציב — לאן הולך הכסף</h4>
+        ${_canEdit ? `<button class="btn ${_isBudgetEditing?'btn-primary':'btn-secondary'} btn-sm" onclick="_toggleBudgetEdit('${k}')">${_isBudgetEditing?'✓ סיום עריכה':'✏️ ערוך טבלה'}</button>` : ''}
       </div>
-      <p style="color:var(--muted);font-size:0.85rem;margin:0 0 12px">פירוט הרכיבים לפי קטגוריה ואופן כיסוי. לחץ "ערוך פרטי תוכנית" לעדכון.</p>
+      <p style="color:var(--muted);font-size:0.85rem;margin:0 0 12px">פירוט הרכיבים לפי קטגוריה ואופן כיסוי.${_canEdit?' לחץ "ערוך טבלה" לעדכון אינליין (הוספת שורות, עמודות מותאמות אישית, ועריכת תאים).':''}</p>
       ${costItemsHtml}
 
       <!-- 📊 EXECUTION — ביצוע -->
@@ -4211,6 +4212,26 @@ function closeProgramEdit() {
 // ============================================================
 // ===== INLINE BUDGET TABLE — Excel-like editing =============
 // ============================================================
+// Which program (if any) currently has the budget table in edit mode.
+// Read-only by default; user clicks "✏️ ערוך טבלה" to switch on.
+let _budgetEditingProg = null;
+async function _toggleBudgetEdit(progKey) {
+  if (_budgetEditingProg === progKey) {
+    // Exiting edit mode — flush any pending edits, then re-render read-only
+    await _inlineSaveCostItems(progKey, /*reRender*/ false);
+    _budgetEditingProg = null;
+    renderProgramDetail();
+  } else {
+    _budgetEditingProg = progKey;
+    renderProgramDetail();
+    // Focus the first input after render
+    setTimeout(() => {
+      const firstInput = document.querySelector('.editable-budget .ci-cell');
+      if (firstInput) firstInput.focus();
+    }, 100);
+  }
+}
+
 // Persist the current cost-items state to Firestore (debounced from cell-blur events)
 let _ciSaveTimer = null;
 function _inlineCostCellChanged(progKey) {
@@ -4346,8 +4367,10 @@ async function _inlineRemoveCostColumn(progKey, label) {
   renderProgramDetail();
 }
 
-// Build the editable budget table (or read-only rendering when canEdit=false)
-function _renderEditableBudgetTable(progKey, items, customCols, canEdit) {
+// Build the budget table. Renders read-only by default; switches to editable inputs when
+// `editMode=true` (controlled by `_budgetEditingProg`). `canEdit` gates whether the user
+// can switch into edit mode at all.
+function _renderEditableBudgetTable(progKey, items, customCols, canEdit, editMode) {
   const TYPE_OPTIONS = [
     {v:'salary',l:'שכר'}, {v:'lease',l:'ליסינג'}, {v:'rent',l:'שכירות'},
     {v:'operations',l:'תפעול'}, {v:'service',l:'שירותים'},
@@ -4361,9 +4384,13 @@ function _renderEditableBudgetTable(progKey, items, customCols, canEdit) {
   const MODE_BADGE = { cash:'💵 מזומן', 'in-kind':'🤝 בעין', subsidized:'💼 מסובסד' };
   const TYPE_LABELS = Object.fromEntries(TYPE_OPTIONS.map(t => [t.v, t.l]));
   const cellInputStyle = 'width:100%;border:1px solid #e5e7eb;background:#fff;padding:6px 8px;border-radius:4px;font-size:0.88rem';
+  const cellTextStyle  = 'white-space:normal;word-break:break-word;vertical-align:top';
   const cols = customCols || [];
   if (!items.length && !canEdit) {
     return '<div class="empty-state" style="padding:14px">פירוט תקציב לא הוגדר עדיין.</div>';
+  }
+  if (!items.length && canEdit && !editMode) {
+    return '<div class="empty-state" style="padding:14px">פירוט תקציב לא הוגדר עדיין. לחץ "✏️ ערוך טבלה" כדי להוסיף רכיבים.</div>';
   }
   // Sums
   const sumAnnual = items.reduce((s,it) => s + (Number(it.annualAmount)||0), 0);
@@ -4382,53 +4409,56 @@ function _renderEditableBudgetTable(progKey, items, customCols, canEdit) {
   </tr></thead><tbody>`;
   items.forEach((it, i) => {
     const mode = it.paymentMode || 'cash';
-    if (canEdit) {
+    if (canEdit && editMode) {
       html += `<tr data-row="${i}">`;
-      html += `<td><input class="ci-cell" type="text" data-i="${i}" data-f="name" value="${(it.name||'').replace(/"/g,'&quot;')}" placeholder="שם הרכיב" onblur="_inlineCostCellChanged('${progKey}')" style="${cellInputStyle}"></td>`;
-      html += `<td><select class="ci-cell" data-i="${i}" data-f="type" onchange="_inlineCostCellChanged('${progKey}')" style="${cellInputStyle}">${TYPE_OPTIONS.map(t => `<option value="${t.v}"${it.type===t.v?' selected':''}>${t.l}</option>`).join('')}</select></td>`;
-      html += `<td><select class="ci-cell" data-i="${i}" data-f="paymentMode" onchange="_inlineCostCellChanged('${progKey}')" style="${cellInputStyle}">${MODE_OPTIONS.map(m => `<option value="${m.v}"${mode===m.v?' selected':''}>${m.l}</option>`).join('')}</select></td>`;
-      html += `<td><input class="ci-cell" type="number" data-i="${i}" data-f="monthlyAmount" data-prev="${it.monthlyAmount||0}" value="${it.monthlyAmount||0}" oninput="_inlineMonthlyChanged('${progKey}', ${i})" onblur="_inlineCostCellChanged('${progKey}')" style="${cellInputStyle};text-align:left"></td>`;
-      html += `<td><input class="ci-cell" type="number" data-i="${i}" data-f="annualAmount" value="${it.annualAmount||0}" onblur="_inlineCostCellChanged('${progKey}')" style="${cellInputStyle};text-align:left;font-weight:600;color:var(--primary)"></td>`;
+      html += `<td style="${cellTextStyle}"><input class="ci-cell" type="text" data-i="${i}" data-f="name" value="${(it.name||'').replace(/"/g,'&quot;')}" placeholder="שם הרכיב" onblur="_inlineCostCellChanged('${progKey}')" style="${cellInputStyle}"></td>`;
+      html += `<td style="${cellTextStyle}"><select class="ci-cell" data-i="${i}" data-f="type" onchange="_inlineCostCellChanged('${progKey}')" style="${cellInputStyle}">${TYPE_OPTIONS.map(t => `<option value="${t.v}"${it.type===t.v?' selected':''}>${t.l}</option>`).join('')}</select></td>`;
+      html += `<td style="${cellTextStyle}"><select class="ci-cell" data-i="${i}" data-f="paymentMode" onchange="_inlineCostCellChanged('${progKey}')" style="${cellInputStyle}">${MODE_OPTIONS.map(m => `<option value="${m.v}"${mode===m.v?' selected':''}>${m.l}</option>`).join('')}</select></td>`;
+      html += `<td style="${cellTextStyle}"><input class="ci-cell" type="number" data-i="${i}" data-f="monthlyAmount" data-prev="${it.monthlyAmount||0}" value="${it.monthlyAmount||0}" oninput="_inlineMonthlyChanged('${progKey}', ${i})" onblur="_inlineCostCellChanged('${progKey}')" style="${cellInputStyle};text-align:left"></td>`;
+      html += `<td style="${cellTextStyle}"><input class="ci-cell" type="number" data-i="${i}" data-f="annualAmount" value="${it.annualAmount||0}" onblur="_inlineCostCellChanged('${progKey}')" style="${cellInputStyle};text-align:left;font-weight:600;color:var(--primary)"></td>`;
       cols.forEach(col => {
         const v = ((it.customFields||{})[col] || '').toString().replace(/"/g,'&quot;');
-        html += `<td><input class="ci-cell" type="text" data-i="${i}" data-f="customFields.${col}" value="${v}" onblur="_inlineCostCellChanged('${progKey}')" style="${cellInputStyle}"></td>`;
+        html += `<td style="${cellTextStyle}"><input class="ci-cell" type="text" data-i="${i}" data-f="customFields.${col}" value="${v}" onblur="_inlineCostCellChanged('${progKey}')" style="${cellInputStyle}"></td>`;
       });
-      html += `<td><input class="ci-cell" type="text" data-i="${i}" data-f="notes" value="${(it.notes||'').replace(/"/g,'&quot;')}" placeholder="הערות..." onblur="_inlineCostCellChanged('${progKey}')" style="${cellInputStyle}"></td>`;
+      html += `<td style="${cellTextStyle};min-width:200px"><input class="ci-cell" type="text" data-i="${i}" data-f="notes" value="${(it.notes||'').replace(/"/g,'&quot;')}" placeholder="הערות..." onblur="_inlineCostCellChanged('${progKey}')" style="${cellInputStyle}"></td>`;
       html += `<td><button onclick="_inlineRemoveCostItem('${progKey}', ${i})" title="מחק שורה" style="background:none;border:0;color:var(--danger);cursor:pointer;font-size:1rem">🗑</button></td>`;
       html += `</tr>`;
     } else {
-      // Read-only with badges
+      // Read-only with badges; full text wrapping so notes don't truncate
       html += `<tr ${mode==='in-kind'?'style="background:#fffbeb"':''}>
-        <td><strong>${it.name||'—'}</strong></td>
-        <td><span style="background:var(--primary-soft);color:var(--primary-dark);padding:2px 8px;border-radius:var(--radius-pill);font-size:0.78rem">${TYPE_LABELS[it.type]||it.type||'—'}</span></td>
-        <td><span style="background:${mode==='in-kind'?'#fef3c7':mode==='subsidized'?'#e0e7ff':'#dcfce7'};color:${mode==='in-kind'?'#92400e':mode==='subsidized'?'#3730a3':'#166534'};padding:2px 8px;border-radius:var(--radius-pill);font-size:0.75rem;font-weight:600">${MODE_BADGE[mode]||mode}</span></td>
-        <td style="text-align:left">₪${(Number(it.monthlyAmount)||0).toLocaleString()}</td>
-        <td style="text-align:left;font-weight:700;color:var(--primary)">₪${(Number(it.annualAmount)||0).toLocaleString()}</td>
-        ${cols.map(c => `<td>${(it.customFields||{})[c]||'—'}</td>`).join('')}
-        <td style="font-size:0.85rem;color:var(--muted)">${it.notes||'—'}</td>
+        <td style="${cellTextStyle}"><strong>${it.name||'—'}</strong></td>
+        <td style="${cellTextStyle}"><span style="background:var(--primary-soft);color:var(--primary-dark);padding:2px 8px;border-radius:var(--radius-pill);font-size:0.78rem;display:inline-block">${TYPE_LABELS[it.type]||it.type||'—'}</span></td>
+        <td style="${cellTextStyle}"><span style="background:${mode==='in-kind'?'#fef3c7':mode==='subsidized'?'#e0e7ff':'#dcfce7'};color:${mode==='in-kind'?'#92400e':mode==='subsidized'?'#3730a3':'#166534'};padding:2px 8px;border-radius:var(--radius-pill);font-size:0.75rem;font-weight:600;display:inline-block">${MODE_BADGE[mode]||mode}</span></td>
+        <td style="${cellTextStyle};text-align:left">₪${(Number(it.monthlyAmount)||0).toLocaleString()}</td>
+        <td style="${cellTextStyle};text-align:left;font-weight:700;color:var(--primary)">₪${(Number(it.annualAmount)||0).toLocaleString()}</td>
+        ${cols.map(c => `<td style="${cellTextStyle}">${(it.customFields||{})[c]||'—'}</td>`).join('')}
+        <td style="${cellTextStyle};font-size:0.88rem;color:var(--dark);min-width:200px;line-height:1.5">${it.notes||'—'}</td>
       </tr>`;
     }
   });
   html += `</tbody>`;
-  // Footer with totals
+  // Footer with totals — extra trailing column shown only in edit mode (delete-row col)
   const colspan = 4 + cols.length;
+  const trailingTd = (canEdit && editMode) ? '<td></td>' : '';
   html += `<tfoot>
-    <tr style="background:#dcfce7"><td colspan="${colspan}" style="font-weight:600">💵 שווי במזומן (נדרש גיוס בפועל)</td><td style="text-align:left;font-weight:700;color:#166534">₪${cashSum.toLocaleString()}</td>${canEdit?'<td></td>':''}</tr>
-    ${inkindSum>0 ? `<tr style="background:#fef3c7"><td colspan="${colspan}" style="font-weight:600">🤝 שווי תרומות בעין</td><td style="text-align:left;font-weight:700;color:#92400e">₪${inkindSum.toLocaleString()}</td>${canEdit?'<td></td>':''}</tr>` : ''}
-    ${subsidizedSum>0 ? `<tr style="background:#e0e7ff"><td colspan="${colspan}" style="font-weight:600">💼 שווי מסובסד</td><td style="text-align:left;font-weight:700;color:#3730a3">₪${subsidizedSum.toLocaleString()}</td>${canEdit?'<td></td>':''}</tr>` : ''}
+    <tr style="background:#dcfce7"><td colspan="${colspan}" style="font-weight:600">💵 שווי במזומן (נדרש גיוס בפועל)</td><td style="text-align:left;font-weight:700;color:#166534">₪${cashSum.toLocaleString()}</td>${trailingTd}</tr>
+    ${inkindSum>0 ? `<tr style="background:#fef3c7"><td colspan="${colspan}" style="font-weight:600">🤝 שווי תרומות בעין</td><td style="text-align:left;font-weight:700;color:#92400e">₪${inkindSum.toLocaleString()}</td>${trailingTd}</tr>` : ''}
+    ${subsidizedSum>0 ? `<tr style="background:#e0e7ff"><td colspan="${colspan}" style="font-weight:600">💼 שווי מסובסד</td><td style="text-align:left;font-weight:700;color:#3730a3">₪${subsidizedSum.toLocaleString()}</td>${trailingTd}</tr>` : ''}
     <tr style="font-weight:700;background:var(--gold-soft);font-size:1.05rem">
       <td colspan="${colspan}">סה"כ שווי שנתי</td>
       <td style="text-align:left;color:var(--gold-dark)">₪${sumAnnual.toLocaleString()}</td>
-      ${canEdit?'<td></td>':''}
+      ${trailingTd}
     </tr>
   </tfoot></table></div>`;
 
-  if (canEdit) {
-    html += `<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center">
+  // Action buttons only visible when in edit mode
+  if (canEdit && editMode) {
+    html += `<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center;padding:10px 12px;background:var(--primary-soft);border-radius:var(--radius-sm)">
       <button class="btn btn-secondary btn-sm" onclick="_inlineAddCostRow('${progKey}')">+ הוסף שורה</button>
       <button class="btn btn-secondary btn-sm" onclick="_inlineAddCostColumn('${progKey}')">+ הוסף עמודה מותאמת אישית</button>
       <span id="ciSavedIndicator" style="margin-right:8px;font-size:0.85rem;color:var(--muted)"></span>
       <span style="margin-right:auto;font-size:0.78rem;color:var(--muted)">השינויים נשמרים אוטומטית בעת יציאה משדה</span>
+      <button class="btn btn-primary btn-sm" onclick="_toggleBudgetEdit('${progKey}')">✓ סיום עריכה</button>
     </div>`;
   }
   return html;
