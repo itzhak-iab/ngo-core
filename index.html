@@ -383,10 +383,10 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
     <div class="nav-item" onclick="switchSection('expenses',this)" id="navExpenses" style="display:none"></div>
     <div style="border-top:1px solid rgba(255,255,255,0.15);margin:10px 0;padding:10px 0;display:flex;gap:4px;justify-content:center">
       <button type="button" id="i18n-he-btn" onclick="setAppLang('he')" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.2);color:#fff;cursor:pointer;font-size:0.82rem">🇮🇱 עבורת</button>
-      <button type="button" id="i18n-en-btn" onclick="setAppLang('en')" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#fff;cursor:pointer;font-size:0.82rem">🇬🇧 English</button>
+      <button type="button" id="i18n-en-btn" onclick="setAppLang('en')" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#fff;cursor:pointer;font-size:0.82rem">🇺🇸 English</button>
     </div>
     <div class="nav-item logout" onclick="signOutUser()"><span class="icon">🚪</span> <span data-i18n="nav.logout">התנתק</span></div>
-    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.07-r43</div>
+    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.07-r44</div>
   </aside>
 
   <!-- Main Content -->
@@ -1571,7 +1571,7 @@ try {
 const storage = firebase.storage();
 let currentUser = null;
 let userRole = null;
-console.log('%c[ruach-manage] v2026.05.07-r43 loaded', 'color:#1a8a9a;font-weight:bold');
+console.log('%c[ruach-manage] v2026.05.07-r44 loaded', 'color:#1a8a9a;font-weight:bold');
 
 // ===== PURPOSE / AREA DICTIONARIES =====
 // The 6 canonical "areas" = the operational programs of the association.
@@ -3376,6 +3376,11 @@ function recomputeCostSum() {
   const sum = _peCostItems.reduce((s,it) => s + (Number(it.annualAmount)||0), 0);
   const el = document.getElementById('pe_costSum');
   if (el) el.innerHTML = `סה"כ שנתי: <strong>₪${sum.toLocaleString()}</strong> <span style="color:var(--muted);font-weight:400">≈ $${ilsToUsd(sum).toLocaleString()}</span> · חודשי: ₪${Math.round(sum/12).toLocaleString()}`;
+  // Mirror the live sum into the (read-only) annual-budget field at the top of the dialog
+  const budgetEl = document.getElementById('pe_budget');
+  if (budgetEl) budgetEl.value = sum;
+  const budgetUsd = document.getElementById('pe_budget_usd');
+  if (budgetUsd) budgetUsd.textContent = `≈ $${ilsToUsd(sum).toLocaleString()}`;
 }
 
 function _collectCostItems() {
@@ -3439,7 +3444,11 @@ function openProgramEdit(key) {
     </div>
     <div class="form-row">
       <div class="form-field"><label>מוביל/ת התוכנית</label><input type="text" id="pe_leader" value="${info.leader||''}"></div>
-      <div class="form-field"><label>תקציב שנתי (₪)</label><input type="number" id="pe_budget" value="${info.annualBudget||0}"></div>
+      <div class="form-field">
+        <label>תקציב שנתי (₪) <span style="color:var(--muted);font-weight:400;font-size:0.78rem">— מחושב מהרכיבים למטה</span></label>
+        <input type="number" id="pe_budget" value="${info.annualBudget||0}" readonly style="background:#f1f5f9;color:var(--primary);font-weight:600;cursor:not-allowed">
+        <small id="pe_budget_usd" style="color:var(--muted);font-size:0.78rem">≈ $${ilsToUsd(info.annualBudget||0).toLocaleString()}</small>
+      </div>
     </div>
     <div class="form-row">
       <div class="form-field"><label>סטטוס</label>
@@ -3457,7 +3466,7 @@ function openProgramEdit(key) {
     </div>
 
     <h4 style="margin:18px 0 10px;color:var(--primary);border-bottom:2px solid var(--gold);padding-bottom:6px">💸 פירוט תקציב — תשומות עם תג מחיר</h4>
-    <p style="color:var(--muted);font-size:0.85rem;margin:0 0 10px">כל שורה היא רכיב תשומה (כוח אדם, ציוד, שירות וכו׳) עם עלות. סך הרכיבים = תקציב שנתי של התוכנית.</p>
+    <p style="color:var(--muted);font-size:0.85rem;margin:0 0 10px">כל שורה היא רכיב תשומה (כוח אדם, ציוד, שירות וכו׳) עם עלות. <strong>סך הרכיבים הוא התקציב השנתי של התוכנית</strong> — השדה למעלה מתעדכן אוטומטית.</p>
     <div id="pe_costItems"></div>
     <button type="button" class="btn btn-secondary btn-sm" onclick="addCostItemRow()" style="margin-bottom:14px">+ הוסף רכיב תשומה</button>
     <div id="pe_costSum" style="text-align:left;font-weight:700;color:var(--primary);margin-bottom:14px;padding:8px 12px;background:var(--gold-soft);border-radius:var(--radius-sm)">סה"כ: ₪0</div>
@@ -3512,9 +3521,13 @@ async function saveProgramEdit(key) {
   // Pull final cost items state from the editor
   _collectCostItems();
   const validCostItems = _peCostItems.filter(it => it.name && (it.monthlyAmount || it.annualAmount));
+  // Always derive annualBudget from cost items so it stays in sync (no manual entry).
+  // Falls back to the existing value only if there are no cost items at all (legacy programs).
+  const computedBudget = validCostItems.reduce((s,it) => s + (Number(it.annualAmount)||0), 0);
+  const fallbackBudget = parseInt(document.getElementById('pe_budget').value) || 0;
   const updates = {
     leader: document.getElementById('pe_leader').value.trim(),
-    annualBudget: parseInt(document.getElementById('pe_budget').value) || 0,
+    annualBudget: validCostItems.length ? computedBudget : fallbackBudget,
     costItems: validCostItems,
     status: document.getElementById('pe_status').value,
     statusLabel: document.getElementById('pe_statusLabel').value.trim(),
