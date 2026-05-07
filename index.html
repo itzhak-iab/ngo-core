@@ -388,7 +388,7 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
     </div>
     <div id="fxBadge" style="text-align:center;font-size:0.75rem;color:rgba(255,255,255,0.7);padding:6px 8px;background:rgba(255,255,255,0.06);border-radius:6px;margin:4px 12px 0"></div>
     <div class="nav-item logout" onclick="signOutUser()"><span class="icon">🚪</span> <span data-i18n="nav.logout">התנתק</span></div>
-    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.07-r55</div>
+    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.07-r56</div>
   </aside>
 
   <!-- Main Content -->
@@ -1582,7 +1582,7 @@ try {
 const storage = firebase.storage();
 let currentUser = null;
 let userRole = null;
-console.log('%c[ruach-manage] v2026.05.07-r55 loaded', 'color:#1a8a9a;font-weight:bold');
+console.log('%c[ruach-manage] v2026.05.07-r56 loaded', 'color:#1a8a9a;font-weight:bold');
 
 // ===== PURPOSE / AREA DICTIONARIES =====
 // The 6 canonical "areas" = the operational programs of the association.
@@ -3227,194 +3227,383 @@ async function exportProgramToPDF(progKey, lang) {
   const orgName = (currentOrgInfo && currentOrgInfo.name) || 'עמותת החשמונאים';
   const orgRegNum = (currentOrgInfo && currentOrgInfo.registrationNumber) || '';
 
-  // Build the content in Hebrew first, then translate if needed
+  // ---- Compute aggregates (mirrors the on-screen logic) ----
   const ci = info.costItems || [];
+  const customCols = info.costColumnsCustom || [];
   const partners = info.partners || [];
   const ciSum = ci.reduce((s,it) => s + (Number(it.annualAmount)||0), 0);
   const partnersCommitted = partners.reduce((s,p) => s + (Number(p.annualCommitment)||0), 0);
+  const partnersReceived  = partners.reduce((s,p) => s + (Number(p.receivedToDate)||0), 0);
   const finRecs = (financeCache||[]).filter(r => r.purpose === progKey);
-  const totalRaised = finRecs.filter(r => r.type==='income').reduce((s,r) => s+(r.amount||0), 0);
-  const totalCommitted = partnersCommitted + totalRaised;
-  const gap = Math.max(0, ciSum - totalCommitted);
-  const fundedPct = ciSum ? Math.round(totalCommitted/ciSum*100) : 0;
+  const incomeReceived = finRecs.filter(r => r.type==='income' && (r.incomeStatus||'received')==='received').reduce((s,r) => s+(r.amount||0), 0);
+  const incomePledged  = finRecs.filter(r => r.type==='income' && r.incomeStatus==='committed').reduce((s,r) => s+(r.amount||0), 0);
+  const totalRaised = incomeReceived;
+  const totalIncomeAll = incomeReceived + incomePledged;
+  const totalCommitted = partnersCommitted + totalIncomeAll;
+  const totalSpent = finRecs.filter(r => r.type==='expense').reduce((s,r) => s+(r.amount||0), 0);
+  const effectiveBudget = ciSum || (info.annualBudget||0);
+  const gap = Math.max(0, effectiveBudget - totalCommitted);
+  const fundedPct = effectiveBudget ? Math.round(totalCommitted/effectiveBudget*100) : 0;
+  const spentPct  = effectiveBudget ? Math.round(totalSpent/effectiveBudget*100) : 0;
+  const cashSum = ci.filter(it => (it.paymentMode||'cash')==='cash').reduce((s,it) => s + (Number(it.annualAmount)||0), 0);
+  const inkindSum = ci.filter(it => it.paymentMode==='in-kind').reduce((s,it) => s + (Number(it.annualAmount)||0), 0);
+  const subsidizedSum = ci.filter(it => it.paymentMode==='subsidized').reduce((s,it) => s + (Number(it.annualAmount)||0), 0);
+
+  // Assigned employees (for the overview section)
+  const employees = (teamCache||[]).filter(t => (t.programs||[]).includes(progKey) || t.primaryProgram === progKey);
 
   const TYPE_LABELS_HE = {salary:'שכר',lease:'ליסינג',rent:'שכירות',operations:'תפעול',service:'שירותים',equipment:'ציוד',grants:'מענקים',other:'אחר'};
+  const TYPE_LABELS_EN = {salary:'Salary',lease:'Lease',rent:'Rent',operations:'Operations',service:'Services',equipment:'Equipment',grants:'Grants',other:'Other'};
   const PARTNER_TYPE_HE = PARTNER_TYPE_LABELS;
+  const MODE_HE = { cash:'מזומן', 'in-kind':'תרומה בעין', subsidized:'מסובסד' };
+  const MODE_EN = { cash:'Cash', 'in-kind':'In-kind', subsidized:'Subsidized' };
 
-  // Hebrew content blocks (each paragraph is translatable independently if lang===en)
-  const blocks = {
+  // ---- Translatable text blocks ----
+  // Strings that need translation when lang === 'en'
+  const t = {
     title:        label,
     orgLine:      `${orgName}${orgRegNum?` · ע.ר. ${orgRegNum}`:''}`,
-    leader:       `מוביל/ת התוכנית: ${info.leader || '—'}`,
+    leader:       info.leader || '—',
+    leaderLine:   `מוביל/ת התוכנית: ${info.leader || '—'}`,
     description:  info.description || '',
     statusLine:   `סטטוס: ${info.statusLabel || (info.status==='active'?'פעיל':info.status==='planning'?'בתכנון':'')}`,
-    budgetTitle:  'תקציב שנתי',
-    budgetVal:    `₪${ciSum.toLocaleString('en-US')}`,
-    raisedTitle:  'גויס (התחייבויות + תרומות)',
-    raisedVal:    `₪${totalCommitted.toLocaleString('en-US')}`,
-    gapTitle:     'פער למימון',
-    gapVal:       `₪${gap.toLocaleString('en-US')}`,
-    pctTitle:     'אחוז כיסוי',
-    pctVal:       `${fundedPct}%`,
-    inputsTitle:  'תשומות עיקריות',
+    vision:       info.vision || '',
     inputs:       info.inputs || '',
-    activitiesTitle: 'פעולות עיקריות',
     activities:   info.activities || '',
-    outputsTitle: 'תפוקות',
     outputs:      info.outputs || '',
-    outcomesTitle:'תוצאות מצופות',
     outcomes:     info.outcomes || '',
-    impactTitle:  'אימפקט (חזון)',
-    impact:       info.impact || '',
-    costItemsTitle: 'פירוט תקציב',
-    partnersTitle:  'שותפים וספונסרים',
-    footer:       `הופק מתוך מערכת הניהול · ${new Date().toLocaleDateString('he-IL')}`
+    impact:       info.impact || ''
+  };
+  // Static labels (translated below if lang === 'en')
+  const L = {
+    overview:        '📋 תמונה כללית של התוכנית',
+    leaderHeader:    'מוביל/ת התוכנית',
+    descriptionHdr:  'תיאור',
+    visionHdr:       '✨ חזון',
+    audiencesHdr:    '👥 קהלי יעד',
+    goalsHdr:        '🎯 מטרות מרכזיות',
+    kpisHdr:         '📈 מדדי הצלחה',
+    employeesHdr:    'עובדים משויכים',
+    budgetSection:   '💰 תקציב ומימון',
+    budgetTitle:     'סה"כ תקציב שנתי',
+    raisedTitle:     'גויס (מתחייב)',
+    receivedTitle:   'התקבל בפועל',
+    spentTitle:      'הוצא בפועל',
+    gapTitle:        'פער למימון',
+    coverageTitle:   '% מכוסה',
+    partnersHdr:     '🤝 שותפים וספונסרים',
+    sourcesHdr:      '📥 מקורות מימון',
+    usesHdr:         '📤 שימושי תקציב — רכיבים',
+    executionHdr:    '📊 ביצוע',
+    meetingsHdr:     '📅 לוח מפגשים שנתי',
+    logicHdr:        '📐 מודל לוגי ויעדי תוצאה',
+    inputsHdr:       'תשומות',
+    activitiesHdr:   'פעולות',
+    outputsHdr:      'תפוקות',
+    outcomesHdr:     'תוצאות',
+    impactHdr:       'אימפקט',
+    questionsHdr:    '❓ נושאים פתוחים להכרעה',
+    testimonialsHdr: '💬 עדויות מהשטח',
+    footer:          `הופק ממערכת ניהול עמותת החשמונאים · ${new Date().toLocaleDateString('he-IL')}`
+  };
+  const L_EN = {
+    overview:        '📋 Program Overview',
+    leaderHeader:    'Program Lead',
+    descriptionHdr:  'Description',
+    visionHdr:       '✨ Vision',
+    audiencesHdr:    '👥 Target Audiences',
+    goalsHdr:        '🎯 Main Goals',
+    kpisHdr:         '📈 Key Performance Indicators',
+    employeesHdr:    'Assigned Team',
+    budgetSection:   '💰 Budget & Funding',
+    budgetTitle:     'Annual Budget',
+    raisedTitle:     'Raised (committed)',
+    receivedTitle:   'Received',
+    spentTitle:      'Spent',
+    gapTitle:        'Funding Gap',
+    coverageTitle:   '% Covered',
+    partnersHdr:     '🤝 Partners & Sponsors',
+    sourcesHdr:      '📥 Sources of Funds',
+    usesHdr:         '📤 Uses of Funds — Budget Components',
+    executionHdr:    '📊 Execution',
+    meetingsHdr:     '📅 Annual Meeting Calendar',
+    logicHdr:        '📐 Logic Model & Outcomes',
+    inputsHdr:       'Inputs',
+    activitiesHdr:   'Activities',
+    outputsHdr:      'Outputs',
+    outcomesHdr:     'Outcomes',
+    impactHdr:       'Impact',
+    questionsHdr:    '❓ Open Questions',
+    testimonialsHdr: '💬 Field Testimonials',
+    footer:          `Generated from Hashmonaim management system · ${new Date().toLocaleDateString('en-US')}`
   };
 
-  // English overrides for static labels
-  const EN_LABELS = {
-    leader: 'Program lead', description: '', statusLine: '',
-    budgetTitle:'Annual Budget', raisedTitle:'Raised (commitments + donations)', gapTitle:'Funding gap', pctTitle:'Coverage',
-    inputsTitle:'Key inputs', activitiesTitle:'Key activities', outputsTitle:'Outputs',
-    outcomesTitle:'Expected outcomes', impactTitle:'Impact (vision)',
-    costItemsTitle:'Budget breakdown', partnersTitle:'Partners & Sponsors',
-    footer: `Generated from internal management system · ${new Date().toLocaleDateString('en-US')}`
-  };
+  // Arrays/structured fields with translatable subitems
+  const goals = (info.goals||[]).slice();
+  const kpis  = (info.kpis||[]).slice();
+  const audiences = (info.targetAudiences||[]).map(a => ({...a}));
+  const meetings  = (info.meetings||[]).map(m => ({...m}));
+  const questions = (info.openQuestions||[]).slice();
+  const testimonials = (info.testimonials||[]).map(x => ({...x}));
 
-  // Translate via existing translateText helper (Google API or MyMemory fallback)
-  let translated = blocks;
+  // ---- Translate everything if lang === 'en' ----
+  let labels = L;
   if (lang === 'en') {
-    if (typeof translateText !== 'function') {
-      toast('פונקציית התרגום לא זמינה','error');
-      return;
-    }
+    if (typeof translateText !== 'function') { toast('פונקציית התרגום לא זמינה','error'); return; }
     toast('מתרגם… זה יכול לקחת רגע.');
-    const mustTranslate = ['title','orgLine','leader','description','statusLine','inputs','activities','outputs','outcomes','impact'];
-    translated = Object.assign({}, blocks);
-    // Replace static labels
-    Object.keys(EN_LABELS).forEach(k => translated[k] = EN_LABELS[k]);
-    // Translate dynamic content
+    labels = L_EN;
+    const stringFields = ['title','orgLine','leader','leaderLine','description','statusLine','vision','inputs','activities','outputs','outcomes','impact'];
     try {
-      for (const k of mustTranslate) {
-        const orig = blocks[k];
-        if (!orig || !orig.trim()) continue;
-        translated[k] = await translateText(orig, 'en');
+      for (const k of stringFields) {
+        if (t[k] && t[k].trim()) t[k] = await translateText(t[k], 'en');
+      }
+      // Translate array items
+      for (let i=0; i<goals.length; i++) goals[i] = await translateText(goals[i], 'en');
+      for (let i=0; i<kpis.length; i++) kpis[i] = await translateText(kpis[i], 'en');
+      for (let i=0; i<questions.length; i++) questions[i] = await translateText(questions[i], 'en');
+      for (let i=0; i<audiences.length; i++) {
+        if (audiences[i].name) audiences[i].name = await translateText(audiences[i].name, 'en');
+        if (audiences[i].description) audiences[i].description = await translateText(audiences[i].description, 'en');
+      }
+      for (let i=0; i<meetings.length; i++) {
+        if (meetings[i].title) meetings[i].title = await translateText(meetings[i].title, 'en');
+        if (meetings[i].responsible) meetings[i].responsible = await translateText(meetings[i].responsible, 'en');
+        if (meetings[i].notes) meetings[i].notes = await translateText(meetings[i].notes, 'en');
+      }
+      for (let i=0; i<testimonials.length; i++) {
+        if (testimonials[i].quote) testimonials[i].quote = await translateText(testimonials[i].quote, 'en');
+        if (testimonials[i].author) testimonials[i].author = await translateText(testimonials[i].author, 'en');
       }
     } catch(e) {
       console.warn('[exportPDF] translate error', e);
-      toast('תרגום חלקי — התוכן ביצע fallback','error');
+      toast('תרגום חלקי','error');
     }
   }
 
-  // Cost items table rows
+  // ---- Build the HTML for each section ----
+  const dir = lang === 'en' ? 'ltr' : 'rtl';
+  const langAttr = lang === 'en' ? 'en' : 'he';
+  const sideBorder = lang === 'en' ? 'left' : 'right';
+  const moneyAlign = lang === 'en' ? 'left' : 'right';
+  const fmt = (n) => `₪${(Number(n)||0).toLocaleString('en-US')}`;
+  const fmtUsd = (n) => `$${ilsToUsd(Number(n)||0).toLocaleString('en-US')}`;
+
+  // KPI bar (4 KPIs)
+  const kpiBarHtml = `<div class="kpi-row">
+    <div class="kpi"><div class="lbl">${labels.budgetTitle}</div><div class="val">${fmt(effectiveBudget)}</div><div class="sub">${fmtUsd(effectiveBudget)}</div></div>
+    <div class="kpi"><div class="lbl">${labels.raisedTitle}</div><div class="val">${fmt(totalCommitted)}</div><div class="sub">${fundedPct}%</div></div>
+    <div class="kpi"><div class="lbl">${labels.receivedTitle}</div><div class="val">${fmt(totalRaised)}</div><div class="sub">${fmtUsd(totalRaised)}</div></div>
+    <div class="kpi"><div class="lbl">${labels.gapTitle}</div><div class="val" style="color:${gap>0?'#dc2626':'#16a34a'}">${fmt(gap)}</div><div class="sub">${gap>0?(lang==='en'?'remaining':'נדרש'):(lang==='en'?'fully covered':'מכוסה')}</div></div>
+  </div>`;
+
+  // Audiences
+  const audiencesHtml = audiences.length ? `<h3>${labels.audiencesHdr}</h3>
+    <div class="audiences">${audiences.map(a => `
+      <div class="audience-card"><div class="audience-name">${a.name||''}</div><div class="audience-desc">${a.description||''}</div></div>
+    `).join('')}</div>` : '';
+
+  // Goals + KPIs
+  const goalsKpisHtml = (goals.length || kpis.length) ? `<div class="two-col">
+    ${goals.length ? `<div><h3>${labels.goalsHdr}</h3><ul>${goals.map(g => `<li>${g}</li>`).join('')}</ul></div>` : ''}
+    ${kpis.length ? `<div><h3>${labels.kpisHdr}</h3><ul>${kpis.map(kp => `<li><strong>${kp}</strong></li>`).join('')}</ul></div>` : ''}
+  </div>` : '';
+
+  // Vision
+  const visionHtml = t.vision ? `<h3>${labels.visionHdr}</h3><div class="vision-block">${t.vision}</div>` : '';
+
+  // Employees
+  const employeesHtml = employees.length ? `<h3>${labels.employeesHdr}</h3>
+    <div class="people">${employees.map(e => {
+      const isLeader = (e.name||'').trim() === (info.leader||'').trim();
+      return `<div class="person ${isLeader?'leader':''}"><div class="person-name">${isLeader?'👑 ':''}${e.name||e.email}</div><div class="person-role">${e.roleTitle || ROLES[e.role] || e.role || ''}</div></div>`;
+    }).join('')}</div>` : '';
+
+  // Partners table
+  const partnersHtml = partners.length ? `<h3>${labels.partnersHdr}</h3><table>
+    <thead><tr><th>${lang==='en'?'Name':'שם'}</th><th>${lang==='en'?'Type':'סוג'}</th><th>${lang==='en'?'Contact':'איש קשר'}</th><th style="text-align:${moneyAlign}">${lang==='en'?'Commitment':'התחייבות'}</th><th style="text-align:${moneyAlign}">${lang==='en'?'Received':'התקבל'}</th></tr></thead>
+    <tbody>${partners.map(p => `<tr>
+      <td><strong>${p.name||'—'}</strong>${p.notes?`<br><small>${p.notes}</small>`:''}</td>
+      <td>${lang==='en'?(p.type||''):(PARTNER_TYPE_HE[p.type]||p.type||'—')}</td>
+      <td>${p.contactPerson||'—'}</td>
+      <td style="text-align:${moneyAlign};font-weight:700">${fmt(p.annualCommitment)}</td>
+      <td style="text-align:${moneyAlign}">${fmt(p.receivedToDate)}</td>
+    </tr>`).join('')}</tbody>
+    <tfoot><tr style="background:#fff7e0;font-weight:700"><td colspan="3">${lang==='en'?'Total':'סה"כ'}</td><td style="text-align:${moneyAlign}">${fmt(partnersCommitted)}</td><td style="text-align:${moneyAlign}">${fmt(partnersReceived)}</td></tr></tfoot>
+  </table>` : '';
+
+  // Sources of funds
+  const sourceRows = [];
+  if (partnersCommitted > 0) sourceRows.push({label: lang==='en'?'Partner commitments':'התחייבויות שותפים', amount:partnersCommitted, kind:lang==='en'?'committed':'מתחייב'});
+  if (incomeReceived > 0) sourceRows.push({label: lang==='en'?'Donations received':'תרומות שהתקבלו', amount:incomeReceived, kind:lang==='en'?'in account':'בחשבון'});
+  if (incomePledged > 0) sourceRows.push({label: lang==='en'?'Donor pledges':'התחייבויות תורמים', amount:incomePledged, kind:lang==='en'?'pledged':'מתחייב'});
+  if (inkindSum > 0) sourceRows.push({label: lang==='en'?'In-kind contributions':'תרומות בעין', amount:inkindSum, kind:lang==='en'?'in-kind':'בעין'});
+  if (subsidizedSum > 0) sourceRows.push({label: lang==='en'?'Subsidized':'מסובסד', amount:subsidizedSum, kind:lang==='en'?'subsidized':'מסובסד'});
+  if (gap > 0) sourceRows.push({label: lang==='en'?'⚠️ Funding gap (uncovered)':'⚠️ פער למימון', amount:gap, kind:lang==='en'?'gap':'חסר', isGap:true});
+  const sourcesHtml = sourceRows.length ? `<h3>${labels.sourcesHdr}</h3><table>
+    <thead><tr><th>${lang==='en'?'Source':'מקור'}</th><th>${lang==='en'?'Type':'סוג'}</th><th style="text-align:${moneyAlign}">${lang==='en'?'Amount (₪)':'סכום (₪)'}</th><th style="text-align:${moneyAlign}">≈ USD</th><th style="text-align:${moneyAlign}">${lang==='en'?'%':'% מתקציב'}</th></tr></thead>
+    <tbody>${sourceRows.map(r => `<tr ${r.isGap?'style="background:#fffbeb"':''}>
+      <td>${r.isGap?`<strong style="color:#dc2626">${r.label}</strong>`:r.label}</td>
+      <td>${r.kind}</td>
+      <td style="text-align:${moneyAlign};font-weight:700">${fmt(r.amount)}</td>
+      <td style="text-align:${moneyAlign};color:#666">${fmtUsd(r.amount)}</td>
+      <td style="text-align:${moneyAlign}">${effectiveBudget?Math.round(r.amount/effectiveBudget*100):0}%</td>
+    </tr>`).join('')}</tbody>
+    <tfoot><tr style="background:#f0f8fa;font-weight:700"><td colspan="2">${lang==='en'?'Total program budget':'סה"כ תקציב התוכנית'}</td><td style="text-align:${moneyAlign}">${fmt(effectiveBudget)}</td><td style="text-align:${moneyAlign}">${fmtUsd(effectiveBudget)}</td><td style="text-align:${moneyAlign}">100%</td></tr></tfoot>
+  </table>` : '';
+
+  // Cost items (uses of funds)
   const ciRows = ci.map(it => {
     const mode = it.paymentMode || 'cash';
-    const modeStr = lang === 'en' ? (mode==='in-kind'?'In-kind':mode==='subsidized'?'Subsidized':'Cash') : (mode==='in-kind'?'תרומה בעין':mode==='subsidized'?'מסובסד':'מזומן');
-    const typeStr = lang === 'en' ? (it.type||'') : (TYPE_LABELS_HE[it.type]||it.type||'');
+    const modeStr = lang === 'en' ? MODE_EN[mode] : MODE_HE[mode];
+    const typeStr = lang === 'en' ? (TYPE_LABELS_EN[it.type]||it.type||'') : (TYPE_LABELS_HE[it.type]||it.type||'');
     return `<tr>
       <td><strong>${it.name||'—'}</strong>${it.notes?`<br><small>${it.notes}</small>`:''}</td>
       <td>${typeStr}</td>
       <td>${modeStr}${it.coveredByPartner?` (${it.coveredByPartner})`:''}</td>
-      <td style="text-align:right;font-weight:700">₪${(Number(it.annualAmount)||0).toLocaleString('en-US')}</td>
+      ${customCols.map(c => `<td>${(it.customFields||{})[c]||'—'}</td>`).join('')}
+      <td style="text-align:${moneyAlign};font-weight:700">${fmt(it.annualAmount)}</td>
     </tr>`;
   }).join('');
+  const usesHtml = ci.length ? `<h3>${labels.usesHdr}</h3><table>
+    <thead><tr>
+      <th>${lang==='en'?'Component':'רכיב'}</th>
+      <th>${lang==='en'?'Type':'סוג'}</th>
+      <th>${lang==='en'?'Coverage':'אופן כיסוי'}</th>
+      ${customCols.map(c => `<th>${c}</th>`).join('')}
+      <th style="text-align:${moneyAlign}">${lang==='en'?'Annual Value':'שווי שנתי'}</th>
+    </tr></thead>
+    <tbody>${ciRows}</tbody>
+    <tfoot><tr style="background:#fff7e0;font-weight:700"><td colspan="${3+customCols.length}">${lang==='en'?'Total':'סה"כ'}</td><td style="text-align:${moneyAlign}">${fmt(ciSum)}</td></tr></tfoot>
+  </table>` : '';
 
-  // Partners table rows
-  const partnerRows = partners.map(p => {
-    const typeStr = lang === 'en' ? p.type : (PARTNER_TYPE_HE[p.type]||p.type);
-    return `<tr>
-      <td><strong>${p.name||'—'}</strong>${p.notes?`<br><small>${p.notes}</small>`:''}</td>
-      <td>${typeStr}</td>
-      <td>${p.contactPerson||'—'}</td>
-      <td style="text-align:right;font-weight:700">₪${(Number(p.annualCommitment)||0).toLocaleString('en-US')}</td>
-    </tr>`;
-  }).join('');
+  // Execution bars
+  const executionHtml = `<h3>${labels.executionHdr}</h3>
+    <div class="bar-row">
+      <div class="bar-label">${lang==='en'?'Funding %':'% גיוס'} (${fundedPct}%)</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100,fundedPct)}%;background:linear-gradient(90deg,#16a34a,#c8a84c)"></div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label">${lang==='en'?'Spent %':'% הוצאה'} (${spentPct}%)</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100,spentPct)}%;background:linear-gradient(90deg,#1a8a9a,#c8a84c)"></div></div>
+    </div>`;
 
-  const dir = lang === 'en' ? 'ltr' : 'rtl';
-  const langAttr = lang === 'en' ? 'en' : 'he';
+  // Meetings table
+  const meetingsHtml = meetings.length ? `<h3>${labels.meetingsHdr}</h3><table>
+    <thead><tr><th style="width:130px">${lang==='en'?'Date':'תאריך'}</th><th>${lang==='en'?'Title':'כותרת'}</th><th>${lang==='en'?'Responsible':'אחראי/ת'}</th><th>${lang==='en'?'Notes':'הערה'}</th></tr></thead>
+    <tbody>${meetings.map(m => `<tr><td><strong>${m.date||''}</strong></td><td>${m.title||''}</td><td>${m.responsible||''}</td><td><small>${m.notes||''}</small></td></tr>`).join('')}</tbody>
+  </table>` : '';
 
-  // Build the HTML document
+  // Logic model
+  const logicSections = [
+    [labels.inputsHdr,     t.inputs],
+    [labels.activitiesHdr, t.activities],
+    [labels.outputsHdr,    t.outputs],
+    [labels.outcomesHdr,   t.outcomes],
+    [labels.impactHdr,     t.impact]
+  ].filter(([_,v]) => v && v.trim());
+  const logicHtml = logicSections.length ? `<h3>${labels.logicHdr}</h3>
+    ${logicSections.map(([h,v]) => `<div class="block-pair"><div class="block-h">${h}</div><div class="block">${v}</div></div>`).join('')}` : '';
+
+  // Open questions
+  const questionsHtml = questions.length ? `<h3 style="color:#92400e">${labels.questionsHdr}</h3>
+    <ul class="questions">${questions.map(q => `<li>${q}</li>`).join('')}</ul>` : '';
+
+  // Testimonials
+  const testimonialsHtml = testimonials.length ? `<h3>${labels.testimonialsHdr}</h3>
+    <div class="testimonials">${testimonials.map(x => `
+      <blockquote class="testi"><div class="testi-q">"${x.quote||''}"</div>${x.author?`<div class="testi-a">— ${x.author}</div>`:''}</blockquote>
+    `).join('')}</div>` : '';
+
+  // ---- Build the full document ----
   const docHtml = `<!doctype html><html lang="${langAttr}" dir="${dir}"><head><meta charset="utf-8">
-    <title>${translated.title}</title>
+    <title>${t.title}</title>
     <style>
-      @page { margin: 18mm 14mm; }
-      body { font-family: ${lang==='en'?"'Manrope','Segoe UI',Arial,sans-serif":"'David','Times New Roman',serif"}; color:#1f1f1f; line-height:1.55; padding:0; margin:0; direction:${dir}; }
-      .doc { max-width: 21cm; margin: 0 auto; padding: 1cm; }
-      .header { text-align:center; border-bottom: 3px solid #c8a84c; padding-bottom: 16px; margin-bottom: 24px; }
-      h1 { color:#1a8a9a; font-size: 1.8rem; margin: 0 0 6px; font-family: ${lang==='en'?"'Manrope',sans-serif":"'Frank Ruhl Libre',serif"}; font-weight: 900; }
-      .subtitle { color:#666; font-size: 0.95rem; }
-      .leader { background:#fff7e0; padding:10px 14px; border-radius:8px; margin-bottom:18px; border-${lang==='en'?'left':'right'}:3px solid #c8a84c }
-      .kpi-row { display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin-bottom:24px; }
-      .kpi { background:#f0f8fa; padding:14px; border-radius:8px; text-align:center; border:1px solid #d4e8ec; }
-      .kpi .lbl { font-size:0.8rem; color:#666; margin-bottom:4px; }
-      .kpi .val { font-size:1.4rem; font-weight:700; color:#1a8a9a; font-family: ${lang==='en'?"'Manrope',sans-serif":"'Frank Ruhl Libre',serif"}; }
-      h2 { color:#14707d; font-size:1.2rem; margin: 24px 0 10px; padding-bottom:6px; border-bottom:1px solid #d4e8ec; font-family: inherit; font-weight:700; }
-      .block { background:#fafafa; padding:12px 14px; border-radius:6px; border-${lang==='en'?'left':'right'}:3px solid #1a8a9a; margin-bottom:12px; white-space:pre-wrap; }
-      table { width:100%; border-collapse: collapse; margin: 10px 0; }
-      th, td { border:1px solid #d4e8ec; padding:8px 12px; text-align:${lang==='en'?'left':'right'}; }
+      @page { margin: 14mm 12mm; }
+      body { font-family: ${lang==='en'?"'Manrope','Segoe UI',Arial,sans-serif":"'David','Times New Roman',serif"}; color:#1f1f1f; line-height:1.55; padding:0; margin:0; direction:${dir}; font-size:10.5pt; }
+      .doc { max-width:21cm; margin:0 auto; padding:1cm; }
+      .header { text-align:center; border-bottom:3px solid #c8a84c; padding-bottom:14px; margin-bottom:18px; }
+      h1 { color:#1a8a9a; font-size:1.7rem; margin:0 0 4px; font-family:${lang==='en'?"'Manrope',sans-serif":"'Frank Ruhl Libre',serif"}; font-weight:900; }
+      .subtitle { color:#666; font-size:0.92rem; }
+      h2 { color:#14707d; font-size:1.25rem; margin:22px 0 8px; padding-bottom:6px; border-bottom:2px solid #c8a84c; font-weight:700; }
+      h3 { color:#1a8a9a; font-size:1.05rem; margin:14px 0 6px; padding-bottom:4px; border-bottom:1px solid #d4e8ec; font-weight:600; }
+      .leader-box { background:#fff7e0; padding:10px 14px; border-radius:8px; margin-bottom:14px; border-${sideBorder}:3px solid #c8a84c; }
+      .vision-block { background:linear-gradient(135deg,#f0f8fa 0%,#fff7e0 100%); padding:12px 16px; border-radius:8px; border-${sideBorder}:3px solid #c8a84c; font-style:italic; line-height:1.7; }
+      .audiences { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+      .audience-card { background:#f0f8fa; padding:10px 12px; border-radius:6px; border-${sideBorder}:3px solid #1a8a9a; }
+      .audience-name { font-weight:700; color:#1a8a9a; margin-bottom:4px; }
+      .audience-desc { font-size:0.9rem; line-height:1.5; }
+      .two-col { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+      ul { padding-${sideBorder}:18px; line-height:1.65; margin:6px 0 10px; }
+      .people { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; }
+      .person { background:#f0f8fa; padding:8px 10px; border-radius:6px; border:1px solid #d4e8ec; font-size:0.88rem; }
+      .person.leader { background:linear-gradient(135deg,#fff7e0,#f0f8fa); border:2px solid #c8a84c; }
+      .person-name { font-weight:700; color:#14707d; }
+      .person-role { font-size:0.78rem; color:#666; }
+      .kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; }
+      .kpi { background:#f0f8fa; padding:10px; border-radius:8px; text-align:center; border:1px solid #d4e8ec; }
+      .kpi .lbl { font-size:0.72rem; color:#666; margin-bottom:3px; }
+      .kpi .val { font-size:1.15rem; font-weight:700; color:#1a8a9a; font-family:${lang==='en'?"'Manrope',sans-serif":"'Frank Ruhl Libre',serif"}; }
+      .kpi .sub { font-size:0.7rem; color:#888; margin-top:2px; }
+      table { width:100%; border-collapse:collapse; margin:8px 0 14px; font-size:0.88rem; }
+      th, td { border:1px solid #d4e8ec; padding:6px 10px; text-align:${moneyAlign==='left'?'left':'right'}; vertical-align:top; }
       th { background:#f0f8fa; font-weight:600; }
-      .footer { margin-top:30px; padding-top:14px; border-top:1px solid #ccc; text-align:center; font-size:0.8rem; color:#666; }
-      div { page-break-inside: avoid; }
+      .block { background:#fafafa; padding:10px 14px; border-radius:6px; border-${sideBorder}:3px solid #1a8a9a; margin-bottom:8px; white-space:pre-wrap; line-height:1.6; }
+      .block-h { font-weight:700; color:#14707d; font-size:0.95rem; margin-bottom:3px; }
+      .questions { background:#fffbeb; padding:10px 24px; border-radius:6px; border-${sideBorder}:3px solid #f59e0b; }
+      .testimonials { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+      .testi { margin:0; padding:10px 14px; background:#fff7e0; border-radius:6px; border-${sideBorder}:3px solid #c8a84c; font-style:italic; }
+      .testi-q { font-size:0.92rem; line-height:1.55; }
+      .testi-a { margin-top:6px; font-size:0.78rem; color:#666; font-style:normal; }
+      .bar-row { margin-bottom:10px; }
+      .bar-label { font-size:0.85rem; color:#666; margin-bottom:3px; display:flex; justify-content:space-between; }
+      .bar-track { background:#e5e7eb; height:8px; border-radius:4px; overflow:hidden; }
+      .bar-fill { height:100%; }
+      .footer { margin-top:24px; padding-top:10px; border-top:1px solid #ccc; text-align:center; font-size:0.78rem; color:#666; }
+      h2, h3, table { page-break-inside:avoid; }
+      .audience-card, .testi, .person, .kpi, .vision-block, .block { page-break-inside:avoid; }
     </style></head><body>
     <div class="doc">
+
+      <!-- HEADER -->
       <div class="header">
-        <img src="${getOrgLogoSrc()}" alt="" style="width:84px;height:84px;object-fit:contain;display:block;margin:0 auto 10px">
-        <h1>${translated.title}</h1>
-        <div class="subtitle">${translated.orgLine}</div>
+        <img src="${getOrgLogoSrc()}" alt="" style="width:78px;height:78px;object-fit:contain;display:block;margin:0 auto 8px">
+        <h1>${t.title}</h1>
+        <div class="subtitle">${t.orgLine}</div>
       </div>
 
-      <div class="leader">
-        <div><strong>${translated.leader}</strong></div>
-        ${translated.description ? `<div style="margin-top:6px">${translated.description}</div>`:''}
-        ${translated.statusLine ? `<div style="margin-top:6px;font-size:0.85rem;color:#666">${translated.statusLine}</div>`:''}
+      <!-- 📋 OVERVIEW -->
+      <h2>${labels.overview}</h2>
+      <div class="leader-box">
+        <div><strong>${labels.leaderHeader}: ${t.leader}</strong></div>
+        ${t.description ? `<div style="margin-top:6px">${t.description}</div>`:''}
+        ${t.statusLine ? `<div style="margin-top:6px;font-size:0.82rem;color:#666">${t.statusLine}</div>`:''}
       </div>
+      ${visionHtml}
+      ${audiencesHtml}
+      ${goalsKpisHtml}
+      ${employeesHtml}
 
-      <div class="kpi-row">
-        <div class="kpi"><div class="lbl">${translated.budgetTitle}</div><div class="val">${translated.budgetVal}</div></div>
-        <div class="kpi"><div class="lbl">${translated.raisedTitle}</div><div class="val">${translated.raisedVal}</div></div>
-        <div class="kpi"><div class="lbl">${translated.gapTitle}</div><div class="val">${translated.gapVal}</div></div>
-        <div class="kpi"><div class="lbl">${translated.pctTitle}</div><div class="val">${translated.pctVal}</div></div>
-      </div>
+      <!-- 💰 BUDGET & FUNDING -->
+      <h2>${labels.budgetSection}</h2>
+      ${kpiBarHtml}
+      ${partnersHtml}
+      ${sourcesHtml}
+      ${usesHtml}
+      ${executionHtml}
 
-      <h2>${translated.inputsTitle}</h2>
-      <div class="block">${translated.inputs || (lang==='en'?'—':'—')}</div>
+      <!-- 📅 MEETINGS -->
+      ${meetingsHtml}
 
-      <h2>${translated.activitiesTitle}</h2>
-      <div class="block">${translated.activities || '—'}</div>
+      <!-- 📐 LOGIC MODEL -->
+      ${logicHtml}
 
-      <h2>${translated.outputsTitle}</h2>
-      <div class="block">${translated.outputs || '—'}</div>
+      <!-- ❓ OPEN QUESTIONS -->
+      ${questionsHtml}
 
-      <h2>${translated.outcomesTitle}</h2>
-      <div class="block">${translated.outcomes || '—'}</div>
+      <!-- 💬 TESTIMONIALS -->
+      ${testimonialsHtml}
 
-      <h2>${translated.impactTitle}</h2>
-      <div class="block" style="background:#fff7e0;border-${lang==='en'?'left':'right'}-color:#c8a84c">${translated.impact || '—'}</div>
-
-      ${ci.length ? `<h2>${translated.costItemsTitle}</h2>
-      <table>
-        <thead><tr>
-          <th>${lang==='en'?'Item':'רכיב'}</th>
-          <th>${lang==='en'?'Type':'סוג'}</th>
-          <th>${lang==='en'?'Coverage':'אופן כיסוי'}</th>
-          <th style="text-align:${lang==='en'?'left':'right'}">${lang==='en'?'Annual Value':'שווי שנתי'}</th>
-        </tr></thead>
-        <tbody>${ciRows}</tbody>
-        <tfoot><tr style="background:#fff7e0;font-weight:700"><td colspan="3">${lang==='en'?'Total':'סה"כ'}</td><td style="text-align:${lang==='en'?'left':'right'}">₪${ciSum.toLocaleString('en-US')}</td></tr></tfoot>
-      </table>`:''}
-
-      ${partners.length ? `<h2>${translated.partnersTitle}</h2>
-      <table>
-        <thead><tr>
-          <th>${lang==='en'?'Name':'שם'}</th>
-          <th>${lang==='en'?'Type':'סוג'}</th>
-          <th>${lang==='en'?'Contact':'איש קשר'}</th>
-          <th style="text-align:${lang==='en'?'left':'right'}">${lang==='en'?'Commitment':'התחייבות'}</th>
-        </tr></thead>
-        <tbody>${partnerRows}</tbody>
-      </table>`:''}
-
-      <div class="footer">${translated.footer}</div>
+      <div class="footer">${labels.footer}</div>
     </div>
   </body></html>`;
 
