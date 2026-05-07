@@ -388,7 +388,7 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
     </div>
     <div id="fxBadge" style="text-align:center;font-size:0.75rem;color:rgba(255,255,255,0.7);padding:6px 8px;background:rgba(255,255,255,0.06);border-radius:6px;margin:4px 12px 0"></div>
     <div class="nav-item logout" onclick="signOutUser()"><span class="icon">🚪</span> <span data-i18n="nav.logout">התנתק</span></div>
-    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.07-r51</div>
+    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.07-r52</div>
   </aside>
 
   <!-- Main Content -->
@@ -1564,7 +1564,7 @@ try {
 const storage = firebase.storage();
 let currentUser = null;
 let userRole = null;
-console.log('%c[ruach-manage] v2026.05.07-r51 loaded', 'color:#1a8a9a;font-weight:bold');
+console.log('%c[ruach-manage] v2026.05.07-r52 loaded', 'color:#1a8a9a;font-weight:bold');
 
 // ===== PURPOSE / AREA DICTIONARIES =====
 // The 6 canonical "areas" = the operational programs of the association.
@@ -2788,17 +2788,17 @@ function _renderProgramDetailInner() {
   const sumAnnual  = costItems.reduce((s,it) => s + (Number(it.annualAmount) ||0), 0);
   // Use computed sum if costItems exist, else fallback to manual annualBudget
   const computedBudget = costItems.length ? sumAnnual : (info.annualBudget || 0);
+  // Cash / in-kind / subsidized splits — used by both cost items table footer AND the unified sources panel
+  const cashSum = costItems.filter(it => (it.paymentMode||'cash') === 'cash').reduce((s,it) => s + (Number(it.annualAmount)||0), 0);
+  const inkindSum = costItems.filter(it => it.paymentMode === 'in-kind').reduce((s,it) => s + (Number(it.annualAmount)||0), 0);
+  const subsidizedSum = costItems.filter(it => it.paymentMode === 'subsidized').reduce((s,it) => s + (Number(it.annualAmount)||0), 0);
   const TYPE_LABELS = {salary:'שכר',lease:'ליסינג',rent:'שכירות',operations:'תפעול',service:'שירותים',equipment:'ציוד',grants:'מענקים',other:'אחר'};
   let costItemsHtml;
   if (costItems.length === 0) {
-    costItemsHtml = `<div class="empty-state" style="padding:14px">פירוט תקציב לא הוגדר עדיין. ${userRole==='admin'?'<br>לחץ על "ערוך" כדי להוסיף רכיבי תשומה.':''}</div>`;
+    costItemsHtml = `<div class="empty-state" style="padding:14px">פירוט תקציב לא הוגדר עדיין. ${_canEdit?'<br>לחץ "✏️ ערוך" כדי להוסיף רכיבים.':''}</div>`;
   } else {
-    // Compute totals split: cash vs in-kind
-    const cashSum = costItems.filter(it => (it.paymentMode||'cash') === 'cash').reduce((s,it) => s + (Number(it.annualAmount)||0), 0);
-    const inkindSum = costItems.filter(it => it.paymentMode === 'in-kind').reduce((s,it) => s + (Number(it.annualAmount)||0), 0);
-    const subsidizedSum = costItems.filter(it => it.paymentMode === 'subsidized').reduce((s,it) => s + (Number(it.annualAmount)||0), 0);
     costItemsHtml = `<table class="data-table" style="margin-bottom:10px">
-      <thead><tr><th>רכיב תשומה</th><th>סוג</th><th>אופן כיסוי</th><th>שנתי (שווי כספי)</th><th>הערות</th></tr></thead>
+      <thead><tr><th>רכיב תקציב</th><th>סוג</th><th>אופן כיסוי</th><th>שנתי (שווי כספי)</th><th>הערות</th></tr></thead>
       <tbody>${costItems.map(it => {
         const mode = it.paymentMode || 'cash';
         const modeBadge = mode === 'in-kind'
@@ -2910,24 +2910,30 @@ function _renderProgramDetailInner() {
       }).join('') + '</tbody></table>' +
       (finanRecords.length > 15 ? `<small style="color:var(--muted);display:block;margin-top:8px">מציג 15 מתוך ${finanRecords.length} רשומות. הכל זמין בעמוד "שקיפות פיננסית".</small>` : '');
 
+  // Helpers for inline edit buttons (used throughout the new layout)
+  const ie = (fid, title) => _canEdit ? `<button class="btn btn-secondary btn-sm" onclick="openProgramFieldEdit('${k}','${fid}')" title="${title||''}" style="padding:4px 10px;font-size:0.78rem">✏️ ערוך</button>` : '';
+  const emptyAdminHint = (fid, msg) => _canEdit ? `<button class="btn btn-secondary btn-sm" onclick="openProgramFieldEdit('${k}','${fid}')" style="padding:6px 14px">+ ${msg}</button>` : '';
+
   // Render the entire section in one shot
   root.innerHTML = `
     <div class="page-header">
       <button class="btn btn-secondary btn-sm" onclick="switchSectionByName('dashboard')" style="margin-bottom:8px">← חזרה לדשבורד</button>
       <h1>${label}</h1>
-      <p style="color:var(--muted)">מוביל/ת: <strong>${info.leader || '—'}</strong> · ${info.description || ''} ${editBtn}</p>
+      <p style="color:var(--muted);margin:4px 0">${info.description || ''}</p>
     </div>
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
       ${_canEdit ? `
-        <button class="btn btn-primary" onclick="quickAddExpenseToProgram('${k}')">+ החזר הוצאות לתוכנית</button>
+        <button class="btn btn-primary" onclick="quickAddExpenseToProgram('${k}')">+ החזר הוצאות</button>
         <button class="btn btn-secondary" onclick="quickAddIncomeToProgram('${k}')">+ הזנת הכנסה</button>
         <button class="btn btn-secondary" onclick="quickAddTaskToProgram('${k}')">+ משימה חדשה</button>
+        ${editBtn}
       ` : ''}
       <button class="btn btn-secondary" onclick="exportProgramToPDF('${k}','he')" style="background:var(--gold-soft);color:var(--gold-dark);border-color:var(--gold)">📄 ייצוא PDF (עברית)</button>
       <button class="btn btn-secondary" onclick="exportProgramToPDF('${k}','en')" style="background:var(--gold-soft);color:var(--gold-dark);border-color:var(--gold)">🌐 Export PDF (English)</button>
     </div>
 
+    <!-- AT-A-GLANCE DASHBOARD (sticky to top of page) -->
     <div class="kpi-grid">
       <div class="kpi clickable" onclick="showProgramRecords('${k}','budget')" title="לחץ לפירוט רכיבי התקציב"><div class="icon">💰</div><div class="label">תקציב שנתי</div><div class="value">${fmtMoney(effectiveBudget)}</div></div>
       <div class="kpi clickable" onclick="showProgramRecords('${k}','committed')" title="לחץ לפירוט מקורות גיוס"><div class="icon">🤝</div><div class="label">גויס (מתחייב)</div><div class="value">${fmtMoney(totalCommitted)}</div></div>
@@ -2937,169 +2943,267 @@ function _renderProgramDetailInner() {
       <div class="kpi clickable" onclick="drillDown('tasks','overdue')" title="לחץ למשימות באיחור"><div class="icon">⚠️</div><div class="label">משימות באיחור</div><div class="value" style="color:var(--danger)">${overdueTasks.length}</div></div>
     </div>
 
-    ${(() => {
-      // Inline edit button shown only to users who can edit this program. The button calls
-      // openProgramFieldEdit(progKey, fieldId), which opens the main edit modal scrolled+focused
-      // on the relevant field. Empty cards still render so admins can populate them.
-      const ie = (fid, title) => _canEdit ? `<button class="btn btn-secondary btn-sm" onclick="openProgramFieldEdit('${k}','${fid}')" title="${title}" style="padding:4px 10px;font-size:0.78rem">✏️ ערוך</button>` : '';
-      const emptyAdminHint = (fid, msg) => _canEdit ? `<button class="btn btn-secondary btn-sm" onclick="openProgramFieldEdit('${k}','${fid}')" style="padding:6px 14px">+ ${msg}</button>` : '';
-
-      const visionCard = info.vision ? `
-        <div class="card" style="background:linear-gradient(135deg,var(--primary-soft) 0%,var(--gold-soft) 100%);border-right:4px solid var(--gold)">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-            <h3 style="margin:0;color:var(--primary)">✨ חזון התוכנית</h3>${ie('pe_vision','עריכת חזון')}
-          </div>
-          <div style="font-size:1.02rem;line-height:1.7;color:var(--dark);font-family:'Frank Ruhl Libre',serif;white-space:pre-wrap">${info.vision}</div>
-        </div>`
-        : (_canEdit ? `<div class="card" style="text-align:center;padding:20px;border:1px dashed var(--border)"><p style="margin:0 0 8px;color:var(--muted)">לא הוגדר חזון לתוכנית</p>${emptyAdminHint('pe_vision','הוסף חזון')}</div>` : '');
-
-      const audiencesCard = (info.targetAudiences||[]).length ? `
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-            <h3 style="margin:0">👥 קהלי יעד</h3>${ie('pe_audiences','עריכת קהלי יעד')}
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
-            ${(info.targetAudiences||[]).map(a => `
-              <div style="background:var(--primary-soft);padding:14px;border-radius:var(--radius-sm);border-right:3px solid var(--primary)">
-                <div style="font-weight:700;color:var(--primary);margin-bottom:6px;font-size:1.02rem">${a.name||''}</div>
-                <div style="font-size:0.92rem;line-height:1.55;color:var(--dark)">${a.description||''}</div>
-              </div>`).join('')}
-          </div>
-        </div>`
-        : (_canEdit ? `<div class="card" style="text-align:center;padding:20px;border:1px dashed var(--border)"><p style="margin:0 0 8px;color:var(--muted)">לא הוגדרו קהלי יעד</p>${emptyAdminHint('pe_audiences','הוסף קהלי יעד')}</div>` : '');
-
-      const goalsKpisCard = ((info.goals||[]).length || (info.kpis||[]).length) ? `
-        <div class="card">
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
-            ${(info.goals||[]).length ? `
-              <div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h3 style="margin:0;color:var(--primary)">🎯 מטרות מרכזיות</h3>${ie('pe_goals','עריכת מטרות')}</div>
-                <ul style="margin:0;padding-right:20px;line-height:1.7">${(info.goals||[]).map(g => `<li>${g}</li>`).join('')}</ul>
-              </div>`
-              : (_canEdit ? `<div style="text-align:center;padding:14px;border:1px dashed var(--border);border-radius:var(--radius-sm)"><p style="margin:0 0 8px;color:var(--muted);font-size:0.9rem">לא הוגדרו מטרות</p>${emptyAdminHint('pe_goals','הוסף מטרות')}</div>` : '')}
-            ${(info.kpis||[]).length ? `
-              <div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h3 style="margin:0;color:var(--primary)">📈 מדדי הצלחה (KPIs)</h3>${ie('pe_kpis','עריכת מדדים')}</div>
-                <ul style="margin:0;padding-right:20px;line-height:1.7">${(info.kpis||[]).map(kp => `<li><strong>${kp}</strong></li>`).join('')}</ul>
-              </div>`
-              : (_canEdit ? `<div style="text-align:center;padding:14px;border:1px dashed var(--border);border-radius:var(--radius-sm)"><p style="margin:0 0 8px;color:var(--muted);font-size:0.9rem">לא הוגדרו KPIs</p>${emptyAdminHint('pe_kpis','הוסף מדדים')}</div>` : '')}
-          </div>
-        </div>` : '';
-
-      const meetingsCard = (info.meetings||[]).length ? `
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-            <h3 style="margin:0">📅 לוח מפגשים שנתי</h3>${ie('pe_meetings','עריכת לוח מפגשים')}
-          </div>
-          <table class="data-table" style="margin:0">
-            <thead><tr><th style="width:130px">תאריך</th><th>כותרת</th><th>אחראי/ת</th><th>הערה</th></tr></thead>
-            <tbody>
-              ${(info.meetings||[]).map(m => `<tr>
-                <td><strong style="color:var(--primary)">${m.date||''}</strong></td>
-                <td>${m.title||''}</td>
-                <td>${m.responsible||''}</td>
-                <td><small style="color:var(--muted)">${m.notes||''}</small></td>
-              </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>`
-        : (_canEdit ? `<div class="card" style="text-align:center;padding:20px;border:1px dashed var(--border)"><p style="margin:0 0 8px;color:var(--muted)">לא הוגדר לוח מפגשים</p>${emptyAdminHint('pe_meetings','הוסף לוח מפגשים')}</div>` : '');
-
-      const questionsCard = (info.openQuestions||[]).length ? `
-        <div class="card" style="background:#fffbeb;border-right:4px solid var(--warning)">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
-            <h3 style="margin:0">❓ נושאים פתוחים להכרעה</h3>${ie('pe_questions','עריכת נושאים פתוחים')}
-          </div>
-          <ul style="margin:0;padding-right:20px;line-height:1.7">${(info.openQuestions||[]).map(q => `<li>${q}</li>`).join('')}</ul>
-        </div>`
-        : (_canEdit ? `<div class="card" style="text-align:center;padding:20px;border:1px dashed var(--border)"><p style="margin:0 0 8px;color:var(--muted)">אין נושאים פתוחים מתועדים</p>${emptyAdminHint('pe_questions','הוסף נושא פתוח')}</div>` : '');
-
-      return visionCard + audiencesCard + goalsKpisCard + meetingsCard + questionsCard;
-    })()}
+    <!-- ============================================================ -->
+    <!-- 📋 SECTION 1 — תמונה כללית של התוכנית                          -->
+    <!-- חזון, קהלי יעד, מטרות, מדדי הצלחה, מוביל, עובדים משויכים        -->
+    <!-- ============================================================ -->
+    <h2 style="margin:24px 0 12px;color:var(--primary);font-size:1.35rem;border-bottom:3px solid var(--gold);padding-bottom:8px">📋 תמונה כללית של התוכנית</h2>
 
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-        <h3 style="margin:0">📐 מודל לוגי של התוכנית</h3>
-        ${editBtn}
+        <h3 style="margin:0">👤 מוביל/ת ועובדים משויכים</h3>
+        ${userRole==='admin' ? `<button class="btn btn-primary btn-sm" onclick="openAssignEmployeeToProgram('${k}')">+ שייך עובד</button>` : ''}
       </div>
-      ${logicHtml}
+      <div style="background:var(--primary-soft);padding:12px 14px;border-radius:var(--radius-sm);border-right:3px solid var(--primary);margin-bottom:12px">
+        <div style="font-size:0.85rem;color:var(--muted);margin-bottom:2px">מוביל/ת התוכנית</div>
+        <div style="font-size:1.05rem;font-weight:700">${info.leader || '—'}</div>
+      </div>
+      ${employeesHtml}
     </div>
 
+    ${info.vision ? `
+      <div class="card" style="background:linear-gradient(135deg,var(--primary-soft) 0%,var(--gold-soft) 100%);border-right:4px solid var(--gold)">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+          <h3 style="margin:0;color:var(--primary)">✨ חזון התוכנית</h3>${ie('pe_vision','עריכת חזון')}
+        </div>
+        <div style="font-size:1.02rem;line-height:1.7;color:var(--dark);font-family:'Frank Ruhl Libre',serif;white-space:pre-wrap">${info.vision}</div>
+      </div>`
+      : (_canEdit ? `<div class="card" style="text-align:center;padding:20px;border:1px dashed var(--border)"><p style="margin:0 0 8px;color:var(--muted)">לא הוגדר חזון לתוכנית</p>${emptyAdminHint('pe_vision','הוסף חזון')}</div>` : '')}
+
+    ${(info.targetAudiences||[]).length ? `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+          <h3 style="margin:0">👥 קהלי יעד</h3>${ie('pe_audiences','עריכת קהלי יעד')}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
+          ${(info.targetAudiences||[]).map(a => `
+            <div style="background:var(--primary-soft);padding:14px;border-radius:var(--radius-sm);border-right:3px solid var(--primary)">
+              <div style="font-weight:700;color:var(--primary);margin-bottom:6px;font-size:1.02rem">${a.name||''}</div>
+              <div style="font-size:0.92rem;line-height:1.55;color:var(--dark)">${a.description||''}</div>
+            </div>`).join('')}
+        </div>
+      </div>`
+      : (_canEdit ? `<div class="card" style="text-align:center;padding:20px;border:1px dashed var(--border)"><p style="margin:0 0 8px;color:var(--muted)">לא הוגדרו קהלי יעד</p>${emptyAdminHint('pe_audiences','הוסף קהלי יעד')}</div>` : '')}
+
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-        <h3 style="margin:0">💸 פירוט תקציב — תשומות עם תג מחיר</h3>
-        ${editBtn}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h3 style="margin:0;color:var(--primary)">🎯 מטרות מרכזיות</h3>${ie('pe_goals','עריכת מטרות')}</div>
+          ${(info.goals||[]).length
+            ? `<ul style="margin:0;padding-right:20px;line-height:1.7">${(info.goals||[]).map(g => `<li>${g}</li>`).join('')}</ul>`
+            : `<p style="color:var(--muted);font-style:italic;margin:0">לא הוגדרו מטרות. ${emptyAdminHint('pe_goals','הוסף מטרות')}</p>`}
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h3 style="margin:0;color:var(--primary)">📈 מדדי הצלחה (KPIs)</h3>${ie('pe_kpis','עריכת מדדים')}</div>
+          ${(info.kpis||[]).length
+            ? `<ul style="margin:0;padding-right:20px;line-height:1.7">${(info.kpis||[]).map(kp => `<li><strong>${kp}</strong></li>`).join('')}</ul>`
+            : `<p style="color:var(--muted);font-style:italic;margin:0">לא הוגדרו KPIs. ${emptyAdminHint('pe_kpis','הוסף מדדים')}</p>`}
+        </div>
       </div>
-      <p style="color:var(--muted);font-size:0.88rem;margin:0 0 12px">כל תשומה מתורגמת לרכיב תקציב. סך הרכיבים = תקציב התוכנית.</p>
-      ${costItemsHtml}
     </div>
+
+    <!-- ============================================================ -->
+    <!-- 🤝 SECTION 2 — שותפים וספונסרים                                -->
+    <!-- ============================================================ -->
+    <h2 style="margin:30px 0 12px;color:var(--primary);font-size:1.35rem;border-bottom:3px solid var(--gold);padding-bottom:8px">🤝 שותפים וספונסרים</h2>
 
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-        <h3 style="margin:0">🤝 שותפים וספונסרים</h3>
+        <h3 style="margin:0">ארגונים, קרנות ותורמי-על</h3>
         ${userRole==='admin' ? `<button class="btn btn-primary btn-sm" onclick="openPartnersEditor('${k}')">✏️ ערוך שותפים</button>` : ''}
       </div>
-      <p style="color:var(--muted);font-size:0.88rem;margin:0 0 12px">ארגונים, קרנות ותורמי-על שמסייעים לתוכנית. ההתחייבות הכוללת מעדכנת את "גויס".</p>
+      <p style="color:var(--muted);font-size:0.88rem;margin:0 0 12px">ההתחייבות הכוללת מהשותפים מעדכנת את "גויס" בדשבורד התקציב.</p>
       ${_renderPartnersTable(partners, k)}
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
         <div style="background:#f0fdf4;padding:10px;border-radius:var(--radius-sm);border-right:3px solid var(--success);text-align:center"><div style="font-size:0.78rem;color:var(--muted)">מתחייב משותפים</div><div style="font-size:1.15rem;font-weight:700">₪${partnersCommitted.toLocaleString()}</div></div>
-        <div style="background:var(--gold-soft);padding:10px;border-radius:var(--radius-sm);border-right:3px solid var(--gold);text-align:center"><div style="font-size:0.78rem;color:var(--muted)">תרומות פיננסיות שנכנסו לתוכנית</div><div style="font-size:1.15rem;font-weight:700">₪${totalRaised.toLocaleString()}</div></div>
+        <div style="background:var(--gold-soft);padding:10px;border-radius:var(--radius-sm);border-right:3px solid var(--gold);text-align:center"><div style="font-size:0.78rem;color:var(--muted)">התקבל משותפים</div><div style="font-size:1.15rem;font-weight:700">₪${partnersReceived.toLocaleString()}</div></div>
         <div style="background:var(--primary-soft);padding:10px;border-radius:var(--radius-sm);border-right:3px solid var(--primary);text-align:center"><div style="font-size:0.78rem;color:var(--muted)">% מהתקציב מכוסה</div><div style="font-size:1.15rem;font-weight:700;color:${fundedPct>=100?'var(--success)':fundedPct>=50?'var(--gold-dark)':'var(--danger)'}">${fundedPct}%</div></div>
       </div>
     </div>
 
-    <div class="card">
-      <h3>🎯 יעדים ומדדי תוצאה</h3>
-      ${goalsHtml}
-    </div>
+    <!-- ============================================================ -->
+    <!-- 💰 SECTION 3 — תקציב התוכנית (CONSOLIDATED)                   -->
+    <!-- KPIs + מקורות מימון + שימושי תקציב + ביצוע                     -->
+    <!-- ============================================================ -->
+    <h2 style="margin:30px 0 12px;color:var(--primary);font-size:1.35rem;border-bottom:3px solid var(--gold);padding-bottom:8px">💰 תקציב התוכנית</h2>
 
     <div class="card">
-      <h3>💰 תקציב וביצוע</h3>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px">
-        <div style="background:#f0fdf4;padding:12px;border-radius:var(--radius-sm);border-right:3px solid var(--success)"><div style="color:var(--muted);font-size:0.78rem">גויס</div><div style="font-size:1.2rem;font-weight:700">₪${totalRaised.toLocaleString()}</div></div>
-        <div style="background:#fffbeb;padding:12px;border-radius:var(--radius-sm);border-right:3px solid var(--warning)"><div style="color:var(--muted);font-size:0.78rem">פער למימון</div><div style="font-size:1.2rem;font-weight:700;color:${gap>0?'var(--danger)':'var(--success)'}">₪${Math.max(0,gap).toLocaleString()}</div></div>
-        <div style="background:var(--primary-soft);padding:12px;border-radius:var(--radius-sm);border-right:3px solid var(--primary)"><div style="color:var(--muted);font-size:0.78rem">% מנוצל</div><div style="font-size:1.2rem;font-weight:700">${spentPct}%</div></div>
+      <p style="color:var(--muted);font-size:0.88rem;margin:0 0 14px">תמונה תקציבית מלאה לתוכנית: סה"כ תקציב, מקורות מימון (מאיפה מגיע הכסף), שימושים (לאן הולך), וביצוע בפועל. נתון מתעדכן אוטומטית מנתוני שותפים, רשומות פיננסיות, ורכיבי תקציב.</p>
+
+      <!-- Mini KPI bar (mirrors top dashboard, cohesive within budget section) -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px">
+        <div style="background:var(--primary-soft);padding:12px;border-radius:var(--radius-sm);border-right:3px solid var(--primary);text-align:center"><div style="font-size:0.78rem;color:var(--muted)">סה"כ תקציב שנתי</div><div style="font-size:1.25rem;font-weight:700;color:var(--primary)">₪${effectiveBudget.toLocaleString()}</div><div style="font-size:0.78rem;color:var(--muted)">≈ $${ilsToUsd(effectiveBudget).toLocaleString()}</div></div>
+        <div style="background:#f0fdf4;padding:12px;border-radius:var(--radius-sm);border-right:3px solid var(--success);text-align:center"><div style="font-size:0.78rem;color:var(--muted)">גויס (מתחייב)</div><div style="font-size:1.25rem;font-weight:700;color:var(--success)">₪${totalCommitted.toLocaleString()}</div><div style="font-size:0.78rem;color:var(--muted)">${fundedPct}% מהתקציב</div></div>
+        <div style="background:var(--gold-soft);padding:12px;border-radius:var(--radius-sm);border-right:3px solid var(--gold);text-align:center"><div style="font-size:0.78rem;color:var(--muted)">התקבל בפועל</div><div style="font-size:1.25rem;font-weight:700;color:var(--gold-dark)">₪${totalRaised.toLocaleString()}</div><div style="font-size:0.78rem;color:var(--muted)">תרומות שנכנסו</div></div>
+        <div style="background:#fffbeb;padding:12px;border-radius:var(--radius-sm);border-right:3px solid var(--warning);text-align:center"><div style="font-size:0.78rem;color:var(--muted)">פער למימון</div><div style="font-size:1.25rem;font-weight:700;color:${gap>0?'var(--danger)':'var(--success)'}">₪${Math.max(0,gap).toLocaleString()}</div><div style="font-size:0.78rem;color:var(--muted)">${gap>0?'נדרש לגייס':'מכוסה במלואו'}</div></div>
       </div>
-      <div style="background:var(--border);height:12px;border-radius:6px;overflow:hidden;margin-bottom:6px"><div style="width:${spentPct}%;height:100%;background:linear-gradient(90deg,var(--primary),var(--gold))"></div></div>
-      <small style="color:var(--muted)">תקציב שנתי מתוכנן: ₪${effectiveBudget.toLocaleString()}</small>
+
+      <!-- 📥 SOURCES OF FUNDS — מאיפה מגיע הכסף -->
+      <h4 style="margin:18px 0 10px;color:var(--primary);border-bottom:2px solid var(--gold);padding-bottom:6px">📥 מקורות מימון — מאיפה מגיע הכסף</h4>
+      <table class="data-table" style="margin-bottom:18px">
+        <thead><tr><th>מקור</th><th>סוג</th><th style="text-align:left">סכום (₪)</th><th style="text-align:left">≈ USD</th><th style="text-align:left;width:80px">% מתקציב</th></tr></thead>
+        <tbody>
+          ${partnersCommitted > 0 ? `<tr>
+            <td>🤝 התחייבויות מ-${partners.length} שותפים/ספונסרים</td>
+            <td><span style="background:#f0fdf4;color:#166534;padding:2px 8px;border-radius:var(--radius-pill);font-size:0.75rem;font-weight:600">מתחייב</span></td>
+            <td style="text-align:left;font-weight:600">₪${partnersCommitted.toLocaleString()}</td>
+            <td style="text-align:left;color:var(--muted);font-size:0.85rem">$${ilsToUsd(partnersCommitted).toLocaleString()}</td>
+            <td style="text-align:left">${effectiveBudget?Math.round(partnersCommitted/effectiveBudget*100):0}%</td>
+          </tr>` : ''}
+          ${totalRaised > 0 ? `<tr>
+            <td>📥 תרומות ישירות ל-${k}</td>
+            <td><span style="background:#fef9e7;color:#92400e;padding:2px 8px;border-radius:var(--radius-pill);font-size:0.75rem;font-weight:600">התקבל</span></td>
+            <td style="text-align:left;font-weight:600">₪${totalRaised.toLocaleString()}</td>
+            <td style="text-align:left;color:var(--muted);font-size:0.85rem">$${ilsToUsd(totalRaised).toLocaleString()}</td>
+            <td style="text-align:left">${effectiveBudget?Math.round(totalRaised/effectiveBudget*100):0}%</td>
+          </tr>` : ''}
+          ${inkindSum > 0 ? `<tr>
+            <td>🤝 תרומות בעין (in-kind)</td>
+            <td><span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:var(--radius-pill);font-size:0.75rem;font-weight:600">בעין</span></td>
+            <td style="text-align:left;font-weight:600">₪${inkindSum.toLocaleString()}</td>
+            <td style="text-align:left;color:var(--muted);font-size:0.85rem">$${ilsToUsd(inkindSum).toLocaleString()}</td>
+            <td style="text-align:left">${effectiveBudget?Math.round(inkindSum/effectiveBudget*100):0}%</td>
+          </tr>` : ''}
+          ${subsidizedSum > 0 ? `<tr>
+            <td>💼 מסובסד (חלקי)</td>
+            <td><span style="background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:var(--radius-pill);font-size:0.75rem;font-weight:600">מסובסד</span></td>
+            <td style="text-align:left;font-weight:600">₪${subsidizedSum.toLocaleString()}</td>
+            <td style="text-align:left;color:var(--muted);font-size:0.85rem">$${ilsToUsd(subsidizedSum).toLocaleString()}</td>
+            <td style="text-align:left">${effectiveBudget?Math.round(subsidizedSum/effectiveBudget*100):0}%</td>
+          </tr>` : ''}
+          ${gap > 0 ? `<tr style="background:#fffbeb">
+            <td><strong style="color:var(--danger)">⚠️ פער למימון (לא מכוסה)</strong></td>
+            <td><span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:var(--radius-pill);font-size:0.75rem;font-weight:600">חסר</span></td>
+            <td style="text-align:left;font-weight:700;color:var(--danger)">₪${gap.toLocaleString()}</td>
+            <td style="text-align:left;color:var(--muted);font-size:0.85rem">$${ilsToUsd(gap).toLocaleString()}</td>
+            <td style="text-align:left;font-weight:700;color:var(--danger)">${effectiveBudget?Math.round(gap/effectiveBudget*100):0}%</td>
+          </tr>` : ''}
+        </tbody>
+        <tfoot>
+          <tr style="background:var(--primary-soft);font-weight:700"><td colspan="2">סה"כ תקציב התוכנית</td><td style="text-align:left">₪${effectiveBudget.toLocaleString()}</td><td style="text-align:left;color:var(--muted)">$${ilsToUsd(effectiveBudget).toLocaleString()}</td><td style="text-align:left">100%</td></tr>
+        </tfoot>
+      </table>
+      ${partnersCommitted+totalRaised+inkindSum+subsidizedSum+gap === 0 ? '<p style="text-align:center;color:var(--muted);font-style:italic;margin:0 0 18px">לא הוגדרו עדיין מקורות מימון. הוסף שותפים, רשומות פיננסיות, או רכיבי תקציב.</p>' : ''}
+
+      <!-- 📤 USES OF FUNDS — שימושי תקציב -->
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:24px 0 8px">
+        <h4 style="margin:0;color:var(--primary);border-bottom:2px solid var(--gold);padding-bottom:6px;flex:1">📤 שימושי תקציב — לאן הולך הכסף</h4>
+        ${editBtn}
+      </div>
+      <p style="color:var(--muted);font-size:0.85rem;margin:0 0 12px">פירוט הרכיבים לפי קטגוריה ואופן כיסוי. לחץ "ערוך פרטי תוכנית" לעדכון.</p>
+      ${costItemsHtml}
+
+      <!-- 📊 EXECUTION — ביצוע -->
+      <h4 style="margin:24px 0 10px;color:var(--primary);border-bottom:2px solid var(--gold);padding-bottom:6px">📊 ביצוע</h4>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px">
+        <div style="background:#f8fafc;padding:14px;border-radius:var(--radius-sm)">
+          <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:6px"><span style="color:var(--muted)">% גיוס (פיננסי)</span><strong>${fundedPct}%</strong></div>
+          <div style="background:var(--border);height:8px;border-radius:4px;overflow:hidden"><div style="width:${Math.min(100,fundedPct)}%;height:100%;background:linear-gradient(90deg,var(--success),var(--gold))"></div></div>
+          <small style="color:var(--muted);font-size:0.75rem">₪${totalCommitted.toLocaleString()} מתוך ₪${effectiveBudget.toLocaleString()}</small>
+        </div>
+        <div style="background:#f8fafc;padding:14px;border-radius:var(--radius-sm)">
+          <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:6px"><span style="color:var(--muted)">% הוצאה בפועל</span><strong>${spentPct}%</strong></div>
+          <div style="background:var(--border);height:8px;border-radius:4px;overflow:hidden"><div style="width:${Math.min(100,spentPct)}%;height:100%;background:linear-gradient(90deg,var(--primary),var(--gold))"></div></div>
+          <small style="color:var(--muted);font-size:0.75rem">₪${totalSpent.toLocaleString()} מתוך ₪${effectiveBudget.toLocaleString()}</small>
+        </div>
+      </div>
     </div>
+
+    <!-- ============================================================ -->
+    <!-- ✅ SECTION 4 — משימות פתוחות בתוכנית                          -->
+    <!-- ============================================================ -->
+    <h2 style="margin:30px 0 12px;color:var(--primary);font-size:1.35rem;border-bottom:3px solid var(--gold);padding-bottom:8px">✅ משימות</h2>
 
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-        <h3 style="margin:0">✅ משימות פתוחות בתוכנית</h3>
+        <h3 style="margin:0">משימות פתוחות בתוכנית</h3>
         <button class="btn btn-secondary btn-sm" onclick="switchSectionByName('tasks')">לכל המשימות →</button>
       </div>
       ${tasksHtml}
     </div>
 
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-        <h3 style="margin:0">👥 עובדים משויכים לתוכנית</h3>
-        ${userRole==='admin' ? `<button class="btn btn-primary btn-sm" onclick="openAssignEmployeeToProgram('${k}')">+ שייך עובד</button>` : ''}
-      </div>
-      ${employeesHtml}
-    </div>
+    ${(info.meetings||[]).length ? `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+          <h3 style="margin:0">📅 לוח מפגשים שנתי</h3>${ie('pe_meetings','עריכת לוח מפגשים')}
+        </div>
+        <table class="data-table" style="margin:0">
+          <thead><tr><th style="width:130px">תאריך</th><th>כותרת</th><th>אחראי/ת</th><th>הערה</th></tr></thead>
+          <tbody>
+            ${(info.meetings||[]).map(m => `<tr>
+              <td><strong style="color:var(--primary)">${m.date||''}</strong></td>
+              <td>${m.title||''}</td>
+              <td>${m.responsible||''}</td>
+              <td><small style="color:var(--muted)">${m.notes||''}</small></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`
+      : (_canEdit ? `<div class="card" style="text-align:center;padding:20px;border:1px dashed var(--border)"><p style="margin:0 0 8px;color:var(--muted)">לא הוגדר לוח מפגשים</p>${emptyAdminHint('pe_meetings','הוסף לוח מפגשים')}</div>` : '')}
 
-    ${(info.testimonials||[]).length ? `
-    <div class="card" style="background:var(--gold-soft);border-right:4px solid var(--gold)">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-        <h3 style="margin:0">💬 עדויות מהשטח</h3>${_canEdit ? `<button class="btn btn-secondary btn-sm" onclick="openProgramFieldEdit('${k}','pe_testimonials')" style="padding:4px 10px;font-size:0.78rem">✏️ ערוך</button>` : ''}
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
-        ${(info.testimonials||[]).map(t => `
-          <blockquote style="margin:0;padding:14px 18px;background:#fff;border-radius:var(--radius-sm);border-right:3px solid var(--gold);font-style:italic;line-height:1.6">
-            <div style="font-family:'Frank Ruhl Libre',serif;color:var(--dark);font-size:0.97rem">"${t.quote||''}"</div>
-            ${t.author ? `<footer style="margin-top:8px;font-size:0.85rem;color:var(--muted);font-style:normal">— ${t.author}</footer>` : ''}
-          </blockquote>
-        `).join('')}
-      </div>
-    </div>`
-    : (_canEdit ? `<div class="card" style="text-align:center;padding:20px;border:1px dashed var(--border)"><p style="margin:0 0 8px;color:var(--muted)">אין עדויות מתועדות</p><button class="btn btn-secondary btn-sm" onclick="openProgramFieldEdit('${k}','pe_testimonials')" style="padding:6px 14px">+ הוסף עדויות</button></div>` : '')}
+    <!-- ============================================================ -->
+    <!-- 📊 SECTION 5 — פעילות פיננסית משויכת לתוכנית                  -->
+    <!-- ============================================================ -->
+    <h2 style="margin:30px 0 12px;color:var(--primary);font-size:1.35rem;border-bottom:3px solid var(--gold);padding-bottom:8px">📊 פעילות פיננסית משויכת לתוכנית</h2>
 
     <div class="card">
-      <h3>📊 פעילות פיננסית אחרונה</h3>
+      <p style="color:var(--muted);font-size:0.88rem;margin:0 0 12px">רשומות הכנסה והוצאה אחרונות שהוקצו לתוכנית זו. לחץ "ערוך" כדי לעדכן רשומה או להעביר אותה לתוכנית אחרת.</p>
       ${financeHtml}
     </div>
+
+    <!-- ============================================================ -->
+    <!-- 📐 SECTION 6 — מודל לוגי + יעדים ומדדי תוצאה                  -->
+    <!-- ============================================================ -->
+    <h2 style="margin:30px 0 12px;color:var(--primary);font-size:1.35rem;border-bottom:3px solid var(--gold);padding-bottom:8px">📐 מודל לוגי ויעדי תוצאה</h2>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <h3 style="margin:0">תשומות ⇒ פעולות ⇒ תפוקות ⇒ תוצאות ⇒ אימפקט</h3>
+        ${editBtn}
+      </div>
+      <p style="color:var(--muted);font-size:0.88rem;margin:0 0 12px">תיאור נרטיבי של שרשרת הערך של התוכנית — מתשומות (משאבים) ועד אימפקט (חזון ארוך טווח).</p>
+      ${logicHtml}
+      <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border)">
+        <h4 style="margin:0 0 10px;color:var(--primary)">📊 מדדי תוצאה (תוכנית עבודה)</h4>
+        ${goalsHtml}
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- ❓ SECTION 7 — נושאים פתוחים להכרעה                            -->
+    <!-- ============================================================ -->
+    ${(info.openQuestions||[]).length ? `
+      <h2 style="margin:30px 0 12px;color:var(--warning);font-size:1.35rem;border-bottom:3px solid var(--warning);padding-bottom:8px">❓ נושאים פתוחים להכרעה</h2>
+      <div class="card" style="background:#fffbeb;border-right:4px solid var(--warning)">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+          <h3 style="margin:0">החלטות שטרם נסגרו</h3>${ie('pe_questions','עריכת נושאים פתוחים')}
+        </div>
+        <ul style="margin:0;padding-right:20px;line-height:1.7">${(info.openQuestions||[]).map(q => `<li>${q}</li>`).join('')}</ul>
+      </div>`
+      : (_canEdit ? `
+      <h2 style="margin:30px 0 12px;color:var(--primary);font-size:1.35rem;border-bottom:3px solid var(--gold);padding-bottom:8px">❓ נושאים פתוחים</h2>
+      <div class="card" style="text-align:center;padding:20px;border:1px dashed var(--border)"><p style="margin:0 0 8px;color:var(--muted)">אין נושאים פתוחים מתועדים</p>${emptyAdminHint('pe_questions','הוסף נושא פתוח')}</div>` : '')}
+
+    <!-- ============================================================ -->
+    <!-- 💬 SECTION 8 — עדויות מהשטח                                    -->
+    <!-- ============================================================ -->
+    <h2 style="margin:30px 0 12px;color:var(--primary);font-size:1.35rem;border-bottom:3px solid var(--gold);padding-bottom:8px">💬 עדויות מהשטח</h2>
+
+    ${(info.testimonials||[]).length ? `
+      <div class="card" style="background:var(--gold-soft);border-right:4px solid var(--gold)">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+          <h3 style="margin:0">קולות מהשטח</h3>${_canEdit ? `<button class="btn btn-secondary btn-sm" onclick="openProgramFieldEdit('${k}','pe_testimonials')" style="padding:4px 10px;font-size:0.78rem">✏️ ערוך</button>` : ''}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
+          ${(info.testimonials||[]).map(t => `
+            <blockquote style="margin:0;padding:14px 18px;background:#fff;border-radius:var(--radius-sm);border-right:3px solid var(--gold);font-style:italic;line-height:1.6">
+              <div style="font-family:'Frank Ruhl Libre',serif;color:var(--dark);font-size:0.97rem">"${t.quote||''}"</div>
+              ${t.author ? `<footer style="margin-top:8px;font-size:0.85rem;color:var(--muted);font-style:normal">— ${t.author}</footer>` : ''}
+            </blockquote>
+          `).join('')}
+        </div>
+      </div>`
+      : (_canEdit ? `<div class="card" style="text-align:center;padding:20px;border:1px dashed var(--border)"><p style="margin:0 0 8px;color:var(--muted)">אין עדויות מתועדות</p><button class="btn btn-secondary btn-sm" onclick="openProgramFieldEdit('${k}','pe_testimonials')" style="padding:6px 14px">+ הוסף עדויות</button></div>` : '')}
   `;
 }
 
