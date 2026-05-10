@@ -167,6 +167,11 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
 .sidebar-header{padding:18px 20px;border-bottom:2px solid var(--primary);margin-bottom:8px}
 .sidebar-header h2{font-size:1.15rem;font-weight:900;color:var(--primary);font-family:'Frank Ruhl Libre',serif}
 .sidebar-header p{font-size:0.75rem;color:var(--muted);margin-top:4px;font-weight:500}
+.ngocore-footer{padding:14px 12px;margin-top:auto;border-top:1px solid rgba(26,138,154,0.12);text-align:center;background:linear-gradient(180deg,transparent 0%,rgba(26,138,154,0.04) 100%)}
+.ngocore-mark{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--muted);font-size:0.78rem;font-weight:500;padding:4px 8px;border-radius:6px;transition:var(--transition)}
+.ngocore-mark:hover{background:var(--primary-soft);color:var(--primary)}
+.ngocore-mark strong{color:var(--primary);font-family:'Frank Ruhl Libre',serif;font-weight:800;letter-spacing:0.3px}
+.ngocore-version{margin-top:4px;font-size:0.68rem;color:rgba(0,0,0,0.3);font-weight:500}
 .sidebar-user{padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);margin:0 14px 8px;background:var(--primary-soft);border-radius:var(--radius);border:1px solid var(--border)}
 .sidebar-user img{width:36px;height:36px;border-radius:50%;border:2px solid var(--gold)}
 .sidebar-user .name{font-size:0.85rem;font-weight:600;color:var(--dark)}
@@ -642,13 +647,24 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
     <div class="nav-item" onclick="switchSection('projects',this)" id="navProjects" style="display:none"></div>
     <div class="nav-item" onclick="switchSection('vehicles',this)" id="navVehicles" style="display:none"></div>
     <div class="nav-item" onclick="switchSection('expenses',this)" id="navExpenses" style="display:none"></div>
-    <div style="border-top:1px solid rgba(255,255,255,0.15);margin:10px 0;padding:10px 0;display:flex;gap:4px;justify-content:center">
-      <button type="button" id="i18n-he-btn" onclick="setAppLang('he')" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.2);color:#fff;cursor:pointer;font-size:0.82rem">🇮🇱 עבורת</button>
-      <button type="button" id="i18n-en-btn" onclick="setAppLang('en')" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#fff;cursor:pointer;font-size:0.82rem">🇺🇸 English</button>
-    </div>
-    <div id="fxBadge" style="text-align:center;font-size:0.75rem;color:rgba(255,255,255,0.7);padding:6px 8px;background:rgba(255,255,255,0.06);border-radius:6px;margin:4px 12px 0"></div>
     <div class="nav-item logout" onclick="signOutUser()"><span class="icon">🚪</span> <span data-i18n="nav.logout">התנתק</span></div>
-    <div style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:8px">v2026.05.07-r62</div>
+
+    <!-- NGO Core platform branding — visible inside the app so users know what platform they're on -->
+    <div class="ngocore-footer">
+      <a href="https://ngocore.io" target="_blank" rel="noopener" class="ngocore-mark" title="NGO Core — מערכת ניהול לעמותות">
+        <svg viewBox="0 0 100 110" width="20" height="22" aria-hidden="true">
+          <defs>
+            <linearGradient id="ngoFooterGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#1a8a9a"/><stop offset="55%" stop-color="#5fa9b3"/><stop offset="100%" stop-color="#c8a84c"/>
+            </linearGradient>
+          </defs>
+          <path d="M50 5 L92 25 L92 75 L50 105 L8 75 L8 25 Z" fill="url(#ngoFooterGrad)" stroke="#fff" stroke-width="3"/>
+          <text x="50" y="65" text-anchor="middle" font-family="'Frank Ruhl Libre',Georgia,serif" font-weight="900" font-size="32" fill="#fff">NC</text>
+        </svg>
+        <span>Powered by <strong>NGO Core</strong></span>
+      </a>
+      <div class="ngocore-version">v2026.05.07-r63</div>
+    </div>
   </aside>
 
   <!-- Main Content -->
@@ -1842,7 +1858,7 @@ try {
 const storage = firebase.storage();
 let currentUser = null;
 let userRole = null;
-console.log('%c[ruach-manage] v2026.05.07-r62 loaded', 'color:#1a8a9a;font-weight:bold');
+console.log('%c[ruach-manage] v2026.05.07-r63 loaded', 'color:#1a8a9a;font-weight:bold');
 
 // ===== PURPOSE / AREA DICTIONARIES =====
 // The 6 canonical "areas" = the operational programs of the association.
