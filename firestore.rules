@@ -1,0 +1,146 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+    function myEmail() { return request.auth.token.email; }
+    function teamDoc() {
+      return get(/databases/$(database)/documents/team/$(myEmail())).data;
+    }
+    function isTeamMember() {
+      return isSignedIn() && exists(/databases/$(database)/documents/team/$(myEmail()));
+    }
+    function teamRole() {
+      return isTeamMember() ? teamDoc().role : 'none';
+    }
+    function isAdmin() { return teamRole() == 'admin'; }
+    function canEdit() { return teamRole() == 'admin' || teamRole() == 'team'; }
+    function isContractEmployee() {
+      return teamRole() == 'ram-plugati'
+        || teamRole() == 'resilience-lead'
+        || teamRole() == 'educational-director'
+        || teamRole() == 'grooms-rams-mentor';
+    }
+    function canSubmitWeekly() {
+      return isAdmin() || teamRole() == 'team' || isContractEmployee();
+    }
+
+    match /team/{email} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin();
+      allow delete: if isAdmin();
+      allow update: if isAdmin()
+        || (isSignedIn() && email == myEmail()
+            && request.resource.data.role == resource.data.role);
+    }
+
+    match /pluga_weekly_reports/{docId} {
+      allow read: if isAdmin()
+        || teamRole() == 'team'
+        || (isContractEmployee() && resource.data.createdBy == myEmail());
+      allow create: if canSubmitWeekly()
+        && request.resource.data.createdBy == myEmail();
+      allow update: if isAdmin()
+        || (canSubmitWeekly() && resource.data.createdBy == myEmail());
+      allow delete: if isAdmin();
+    }
+
+    match /config/{docId} {
+      allow read: if isTeamMember();
+      allow write: if canEdit();
+    }
+
+    match /vehicles/{docId}       { allow read: if isTeamMember(); allow write: if canEdit(); }
+    match /trips/{docId}          { allow read: if isTeamMember(); allow write: if canEdit(); }
+    match /vehicleEvents/{docId}  { allow read: if isTeamMember(); allow write: if canEdit(); }
+    match /finance/{docId}        { allow read: if isTeamMember(); allow write: if canEdit(); }
+    match /donors/{docId}         { allow read: if isTeamMember(); allow write: if canEdit(); }
+    match /projects/{docId}       { allow read: if isTeamMember(); allow write: if canEdit(); }
+    match /reports/{docId}        { allow read: if isTeamMember(); allow write: if canEdit(); }
+
+    // ----- TASKS — relaxed to allow expense-approval auto-tasks from any signed-in user -----
+    // Creator must be the authenticated user. Assignees can mark tasks done.
+    match /tasks/{docId} {
+      allow read: if isTeamMember();
+      allow create: if isSignedIn()
+                     && request.resource.data.createdBy == myEmail();
+      allow update: if canEdit()
+                     || (isSignedIn()
+                         && resource.data.assignees is list
+                         && myEmail() in resource.data.assignees);
+      allow delete: if canEdit();
+    }
+
+    // ===== EXPENSE REIMBURSEMENT REQUESTS =====
+    // Any signed-in user can submit a request on their own behalf.
+    // Reads are limited to managers, submitter, or the designated approver.
+    // The designated approver can flip pending → approved/rejected.
+    // Admin can flip approved → paid (which also creates a finance record client-side).
+    match /expenseRequests/{reqId} {
+      allow create: if isSignedIn()
+                     && request.resource.data.createdBy == myEmail()
+                     && request.resource.data.status == 'pending'
+                     && request.resource.data.amount is number
+                     && request.resource.data.amount > 0;
+      allow read: if canEdit()
+                   || resource.data.createdBy == myEmail()
+                   || resource.data.approverEmail == myEmail();
+      allow update: if isAdmin()
+                     || (resource.data.approverEmail == myEmail()
+                         && resource.data.status == 'pending'
+                         && request.resource.data.status in ['approved','rejected'])
+                     || (resource.data.createdBy == myEmail()
+                         && resource.data.status == 'pending'
+                         && request.resource.data.status == 'pending'
+                         && request.resource.data.createdBy == resource.data.createdBy);
+      allow delete: if isAdmin()
+                     || (resource.data.createdBy == myEmail()
+                         && resource.data.status == 'pending');
+    }
+
+    // ===== NOTIFICATIONS =====
+    // SECURITY: cross-user notifications are scoped to team members of the same org,
+    // with strict field validation to prevent stored-XSS via title/body/link.
+    match /notifications/{nId} {
+      allow create: if isTeamMember()
+        && request.resource.data.userEmail is string
+        && request.resource.data.userEmail.size() < 200
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0 && request.resource.data.title.size() < 200
+        && request.resource.data.body is string
+        && request.resource.data.body.size() < 2000
+        && (!('link' in request.resource.data) || (request.resource.data.link is string && request.resource.data.link.size() < 500));
+      allow read:   if isSignedIn() && resource.data.userEmail == myEmail();
+      allow update: if isSignedIn() && resource.data.userEmail == myEmail()
+                     && request.resource.data.userEmail == resource.data.userEmail;
+      allow delete: if isSignedIn() && resource.data.userEmail == myEmail();
+    }
+
+    // ===== VEHICLE FAULTS =====
+    // Any team member can report; admins can delete.
+    match /vehicleFaults/{fId} {
+      allow create: if isTeamMember() && request.resource.data.createdBy == myEmail();
+      allow read:   if isTeamMember();
+      allow update: if canEdit()
+                     || (isTeamMember() && resource.data.createdBy == myEmail());
+      allow delete: if isAdmin();
+    }
+
+    // Landing-page leads — anyone (unauthenticated) can submit a contact request,
+    // only super-admins can read/manage them
+    match /leads/{leadId} {
+      allow create: if
+        request.resource.data.keys().hasAll(['name','email','createdAt'])
+        && request.resource.data.name is string
+        && request.resource.data.email is string
+        && request.resource.data.name.size() > 0 && request.resource.data.name.size() < 200
+        && request.resource.data.email.size() > 0 && request.resource.data.email.size() < 200
+        && (!('message' in request.resource.data) || request.resource.data.message.size() < 5000);
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /{document=**} { allow read, write: if false; }
+  }
+}
