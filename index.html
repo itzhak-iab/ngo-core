@@ -823,7 +823,7 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
         <img id="ngoLogoSidebar" src="" alt="" style="height:22px;width:auto">
         <span>Powered by <strong>NGO Core</strong></span>
       </a>
-      <div class="ngocore-version">v2026.05.07-r75</div>
+      <div class="ngocore-version">v2026.05.07-r76</div>
     </div>
   </aside>
 
@@ -2000,9 +2000,18 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
 
 <script>
 // ===== FIREBASE INIT =====
+// Dynamic authDomain — must match the current host so the auth handler is first-party
+// (avoids Chrome blocking third-party cookies on the auth iframe). Firebase Hosting
+// automatically serves /__/auth/* on whatever domain is hosting the site.
+const _authDomain = (() => {
+  const h = location.host.toLowerCase();
+  if (h === 'ngocore.io' || h === 'www.ngocore.io') return h;
+  if (h.endsWith('.web.app')) return 'ruach-hashmonait.web.app';
+  return 'ruach-hashmonait.firebaseapp.com';
+})();
 firebase.initializeApp({
   apiKey: "AIzaSyDpuUq6hpSV6MJv9-7-YMJDEr-tmSWuy9c",
-  authDomain: "ruach-hashmonait.firebaseapp.com",
+  authDomain: _authDomain,
   projectId: "ruach-hashmonait",
   storageBucket: "ruach-hashmonait.firebasestorage.app",
   messagingSenderId: "996341650604",
@@ -2050,7 +2059,7 @@ try {
 const storage = firebase.storage();
 let currentUser = null;
 let userRole = null;
-console.log('%c[ruach-manage] v2026.05.07-r75 loaded', 'color:#1a8a9a;font-weight:bold');
+console.log('%c[ruach-manage] v2026.05.07-r76 loaded', 'color:#1a8a9a;font-weight:bold');
 
 // ===== PURPOSE / AREA DICTIONARIES =====
 // The 6 canonical "areas" = the operational programs of the association.
