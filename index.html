@@ -72,7 +72,7 @@
   img-src 'self' data: blob: https:;
   media-src 'self' data: blob: https:;
   connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com https://firestore.googleapis.com https://www.gstatic.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.cloudfunctions.net https://open.er-api.com https://api.exchangerate-api.com https://api.frankfurter.app https://translate.googleapis.com https://api.mymemory.translated.net;
-  frame-src 'self' https://*.firebaseapp.com https://accounts.google.com;
+  frame-src 'self' https://*.firebaseapp.com https://*.web.app https://accounts.google.com https://ngocore.io https://www.ngocore.io;
   object-src 'none';
   base-uri 'self';
   form-action 'self';
@@ -823,7 +823,7 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
         <img id="ngoLogoSidebar" src="" alt="" style="height:22px;width:auto">
         <span>Powered by <strong>NGO Core</strong></span>
       </a>
-      <div class="ngocore-version">v2026.05.07-r78</div>
+      <div class="ngocore-version">v2026.05.07-r79</div>
     </div>
   </aside>
 
@@ -2000,20 +2000,12 @@ h1,h2,h3,h4{font-family:'Frank Ruhl Libre','David',serif;letter-spacing:-0.3px}
 
 <script>
 // ===== FIREBASE INIT =====
-// Dynamic authDomain — matches current host so auth handler is first-party (avoids
-// Chrome blocking third-party cookies on the auth iframe). Each host below has been
-// added to the OAuth client's authorized JavaScript origins + redirect URIs in GCP.
-// Firebase Hosting auto-serves /__/auth/handler on web.app, firebaseapp.com, and any
-// custom domains attached to the Firebase Hosting site.
-const _authDomain = (() => {
-  const h = location.host.toLowerCase();
-  if (h === 'ngocore.io' || h === 'www.ngocore.io') return h;
-  if (h.endsWith('.web.app')) return 'ruach-hashmonait.web.app';
-  return 'ruach-hashmonait.firebaseapp.com';
-})();
+// authDomain is static — the canonical Firebase Hosting auth handler. Google OAuth
+// has whitelisted this domain since project creation; the SDK passes the credential
+// back via URL fragment (not localStorage), so the redirect flow works cross-domain.
 firebase.initializeApp({
   apiKey: "AIzaSyDpuUq6hpSV6MJv9-7-YMJDEr-tmSWuy9c",
-  authDomain: _authDomain,
+  authDomain: "ruach-hashmonait.firebaseapp.com",
   projectId: "ruach-hashmonait",
   storageBucket: "ruach-hashmonait.firebasestorage.app",
   messagingSenderId: "996341650604",
@@ -2061,7 +2053,7 @@ try {
 const storage = firebase.storage();
 let currentUser = null;
 let userRole = null;
-console.log('%c[ruach-manage] v2026.05.07-r78 loaded', 'color:#1a8a9a;font-weight:bold');
+console.log('%c[ruach-manage] v2026.05.07-r79 loaded', 'color:#1a8a9a;font-weight:bold');
 
 // ===== PURPOSE / AREA DICTIONARIES =====
 // The 6 canonical "areas" = the operational programs of the association.
@@ -2923,6 +2915,7 @@ function signIn() {
 
   if (isCustomDomain) {
     _dbg('1️⃣ דומיין מותאם → signInWithRedirect (מנתב ל-Google)...', '#0891b2');
+    try { sessionStorage.setItem('_ngc_redirect_pending', '1'); } catch(_) {}
     auth.signInWithRedirect(provider).catch(e => {
       _signInInFlight = false;
       if (btn) { btn.disabled = false; btn.style.opacity = ''; }
@@ -2958,6 +2951,7 @@ function signIn() {
       } else if (code === 'auth/popup-blocked' || code === 'auth/internal-error') {
         _dbg('🔁 מנסה redirect כגיבוי...', '#d97706');
         _signInInFlight = true;
+        try { sessionStorage.setItem('_ngc_redirect_pending', '1'); } catch(_) {}
         auth.signInWithRedirect(provider).catch(e2 => {
           _signInInFlight = false;
           showLoginError('שגיאה', e2.message||e2.code);
@@ -2971,11 +2965,35 @@ function signIn() {
 }
 
 // Handle redirect result on page load (for mobile / fallback flow)
-auth.getRedirectResult().then(result => {
-  if (result && result.user) console.log('[auth] redirect signin OK:', result.user.email);
-}).catch(e => {
-  if (e && e.code) console.warn('[auth] redirect result error:', e.code, e.message);
-});
+// Deferred: getRedirectResult must run AFTER DOMContentLoaded so the auth iframe has
+// time to initialize. Running it synchronously during script parse triggers
+// auth/internal-error even on fresh loads with no redirect in progress — which masks
+// real auth errors and breaks the actual redirect flow when one IS in progress.
+function _processRedirectResult() {
+  auth.getRedirectResult().then(result => {
+    if (result && result.user) {
+      console.log('[auth] redirect signin OK:', result.user.email);
+      if (typeof _dbg === 'function') _dbg('✅ redirect OK: ' + result.user.email, '#16a34a');
+    }
+  }).catch(e => {
+    if (!e || !e.code) return;
+    // auth/internal-error on fresh load with no redirect in progress is noise — ignore
+    // unless we actually attempted a redirect (which sets a sessionStorage flag below).
+    const wasRedirecting = sessionStorage.getItem('_ngc_redirect_pending') === '1';
+    if (e.code === 'auth/internal-error' && !wasRedirecting) return;
+    sessionStorage.removeItem('_ngc_redirect_pending');
+    console.warn('[auth] redirect result error:', e.code, e.message);
+    if (typeof showLoginError === 'function') {
+      showLoginError('שגיאת התחברות', 'אנא נסה שוב. אם זה ממשיך — פתח חלון פרטי.');
+    }
+  });
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _processRedirectResult);
+} else {
+  // DOM already ready — defer to next tick to let Auth SDK finish init
+  setTimeout(_processRedirectResult, 0);
+}
 
 function signOutUser() {
   auth.signOut().then(() => { location.href = location.pathname; });
